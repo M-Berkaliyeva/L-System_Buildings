@@ -1,6 +1,7 @@
 #################
 ## Eclipse
 #################
+vc2010
 
 *.pydevproject
 .project
