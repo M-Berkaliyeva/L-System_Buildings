@@ -118,16 +118,16 @@ static char *get_sprintf_buffer() {
 #include "../math/random.h"
 
 // CG, GLSL, C++ compiler
-#include "../compiler/cpp_error.h"
-#include "../compiler/cpp_tokens.h"
-#include "../compiler/cpp_lexer.h"
-#include "../compiler/cpp_preprocessor.h"
-#include "../compiler/cpp_value.h"
-#include "../compiler/cpp_expr.h"
-#include "../compiler/cpp_type.h"
-#include "../compiler/cpp_statement.h"
-#include "../compiler/cpp_scope.h"
-#include "../compiler/cpp_parser.h"
+//#include "../compiler/cpp_error.h"
+//#include "../compiler/cpp_tokens.h"
+//#include "../compiler/cpp_lexer.h"
+//#include "../compiler/cpp_preprocessor.h"
+//#include "../compiler/cpp_value.h"
+//#include "../compiler/cpp_expr.h"
+//#include "../compiler/cpp_type.h"
+//#include "../compiler/cpp_statement.h"
+//#include "../compiler/cpp_scope.h"
+//#include "../compiler/cpp_parser.h"
 
 // loaders (low dependency, so you can use them in other projects)
 #include "../loaders/zip_decoder.h"

@@ -26,6 +26,8 @@
     <ClInclude Include="..\..\src\examples\layer1\examples.h" />
     <ClInclude Include="..\..\src\examples\layer1\gif\gif_app.h" />
     <ClInclude Include="..\..\src\examples\layer1\invaderers\invaderers_app.h" />
+    <ClInclude Include="..\..\src\examples\layer1\L-System_Buildings\LSystem_building.h" />
+    <ClInclude Include="..\..\src\examples\layer1\L-System_Buildings\LSystem_building_app.h" />
     <ClInclude Include="..\..\src\examples\layer1\physics\physics_app.h" />
     <ClInclude Include="..\..\src\examples\layer1\ping\ping_app.h" />
     <ClInclude Include="..\..\src\examples\layer1\texture\texture_app.h" />

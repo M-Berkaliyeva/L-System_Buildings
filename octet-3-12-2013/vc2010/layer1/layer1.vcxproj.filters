@@ -30,6 +30,9 @@
     <Filter Include="octet\shaders">
       <UniqueIdentifier>{15d0b5d3-8634-4ef5-a8d5-4c4ced90608a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="l-system_building">
+      <UniqueIdentifier>{ffdc3426-0576-43f1-a5a1-a46a42ad9afe}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\examples\layer1\main.cpp">
@@ -192,6 +195,12 @@
     </ClInclude>
     <ClInclude Include="..\..\src\examples\layer1\angry_box2d\angry_box2d_app.h">
       <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\examples\layer1\L-System_Buildings\LSystem_building_app.h">
+      <Filter>l-system_building</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\examples\layer1\L-System_Buildings\LSystem_building.h">
+      <Filter>l-system_building</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

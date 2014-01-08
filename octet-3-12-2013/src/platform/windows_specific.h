@@ -149,7 +149,7 @@ namespace octet {
       gl_context = 0;
      
       window_handle = CreateWindow(L"MyClass", L"octet",
-        WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 512, 512,
+        WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 768, 768,
         NULL, NULL, wndclass.hInstance, (LPVOID)this
       );
 
@@ -282,9 +282,17 @@ namespace octet {
           }
           DispatchMessage (&msg);
         }
+		unsigned i = 0;
+		for(; i < m.size(); i++)
+		{
+			if(m.value(i) != NULL && (GetWindowLongA(m.value(i)->window_handle, GWL_STYLE) & WS_VISIBLE) != 0)
+				break;
+		}
+		if(i == m.size())
+			exit(0);
 
         // waste some time. (do not do this in real games!)
-        Sleep(1000/30);
+        Sleep(1000/60);
 
         for (int i = 0; i != m.size(); ++i) {
           // note: because Win8 generates an invisible window, we need to check m.value(i)
