@@ -26,7 +26,7 @@ class LSystem_building_app : public app {
 	// this is called once OpenGL is initialized
 	void app_init() {
 
-		l.load("1.txt");
+		l.load("..\\..\\assets\\1.txt");
 		// initialize the shader
 		texture_shader_.init();
 
