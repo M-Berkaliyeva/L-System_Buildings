@@ -146,7 +146,7 @@ namespace octet
 		void load(char *path) 	
 		{
 			wall_tex = resources::get_texture_handle(GL_RGB, "!bricks");
-			floor_tex = resources::get_texture_handle(GL_RGB, "#7F7F7FFF");
+			floor_tex = resources::get_texture_handle(GL_RGB, "!bricks");
 			std::ifstream f(path, std::ios::in);
 			dynarray<std::string> strs;
 			rules.reset();
@@ -308,8 +308,6 @@ namespace octet
 			current_state.state::state(branch_length);
 			floor_mesh.reset();
 			floor_mesh.push_back(vec3(0, 1, 0));
-			floor_uvs.reset();
-			floor_uvs.push_back(vec2(.4f, .4f));
 			state_stack.reset();
 			mesh.reset();
 			uvs.reset();
@@ -339,6 +337,12 @@ namespace octet
 			}
 			enclose();
 			ear_clipping_triangulation(floor_mesh);
+			floor_uvs.reset();
+			floor_uvs.resize(floor_mesh.size());
+			for(unsigned int i = 0; i < floor_mesh.size(); i++)
+			{
+				floor_uvs[i] = vec2(floor_mesh[i].x(), floor_mesh[i].z());
+			}
 		}
 
 		//decrease iteration count
@@ -419,7 +423,7 @@ namespace octet
 		// branch producing operation denoted by 'F'
 		void extend()
 		{
-			vec3 vector_h(1, 0, 0), vector_v(0, 1, 0);
+			vec3 vector_h((float)current_state.length, 0.f, 0.f), vector_v(0, 1, 0);
 			vec3 p0 = current_state.pos - vector_v;
 			vec3 p1 = current_state.pos + vector_v;
 			vector_h = vector_h * current_state.m;
@@ -429,14 +433,14 @@ namespace octet
 			mesh.push_back(p1);
 			mesh.push_back(p2);
 			mesh.push_back(p3);
-			vec2 uv(0, 0), uv1(0, 1);
+			vec2 uv(0, 0), uv1(0, 2);
 			uvs.push_back(uv);
 			uvs.push_back(uv1);
-			uvs.push_back(uv1 + vec2(1, 0));
-			uvs.push_back(uv + vec2(1, 0));
+			uvs.push_back(uv1 + vec2(2, 0));
+			uvs.push_back(uv + vec2(2, 0));
 			current_state.pos += vector_h;
 			floor_mesh.push_back(current_state.pos + vector_v);
-			floor_uvs.push_back(vec2(.4f, .4f));
+			floor_uvs.push_back(vec2(current_state.pos.x(), current_state.pos.z()));
 			current_state.length -= branch_length_decrement;
 
 		}

@@ -35,6 +35,7 @@ class LSystem_building_app : public app {
 
 		// put the camera a short distance from the center, looking towards the triangle
 		cameraToWorld.loadIdentity();
+		cameraToWorld.rotateX(-20);
 		cameraToWorld.translate(0, 2.5, 8);
 	}
 
@@ -63,6 +64,8 @@ class LSystem_building_app : public app {
 		glCullFace(GL_BACK);
 		glFrontFace(GL_CW);
 		glDisable(GL_CULL_FACE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);		
 		//*/
 
 		//glPolygonMode(GL_BACK, GL_LINE);
