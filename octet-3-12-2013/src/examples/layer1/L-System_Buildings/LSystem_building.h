@@ -233,12 +233,13 @@ namespace octet
 				temp_polygon[i] = polygon[i];
 			}
 			polygon.reset();
-			int index = 0;
+			int index;
 			while(temp_polygon.size() != 3)
 			{
+				index = 0;
 				for(unsigned int i = 1; i < temp_polygon.size(); i++)
 				{
-					if(temp_polygon[index].y() < temp_polygon[i].y())
+					if(temp_polygon[index].z() < temp_polygon[i].z())
 						index = i;
 				}
 				polygon.push_back(temp_polygon[index]);
@@ -249,7 +250,6 @@ namespace octet
 			polygon.push_back(temp_polygon[0]);
 			polygon.push_back(temp_polygon[1]);
 			polygon.push_back(temp_polygon[2]);
-
 		}
 
 		//render both branch mesh

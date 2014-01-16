@@ -35,7 +35,7 @@ class LSystem_building_app : public app {
 
 		// put the camera a short distance from the center, looking towards the triangle
 		cameraToWorld.loadIdentity();
-		cameraToWorld.translate(0, 2.5, 5);
+		cameraToWorld.translate(0, 2.5, 8);
 	}
 
 	// this is called to draw the world
@@ -54,8 +54,7 @@ class LSystem_building_app : public app {
 		// build a projection matrix: model -> world -> camera -> projection
 		// the projection space is the cube -1 <= x/w, y/w, z/w <= 1
 		mat4t modelToProjection = mat4t::build_projection_matrix(modelToWorld, cameraToWorld);
-		//modelToWorld.rotateX(1);
-		modelToWorld.rotateY(2);
+		modelToWorld.rotateY(.5f);
 
 		vec4 color(0, 1, 0, 1);
 		texture_shader_.render(modelToProjection, 0);
