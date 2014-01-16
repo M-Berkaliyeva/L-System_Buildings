@@ -3,10 +3,10 @@ angle
 branch length
 .1
 iteration
-1
+2
 axiom
 F
 letters
 F
 rules
-F+F+F
+F---F+F

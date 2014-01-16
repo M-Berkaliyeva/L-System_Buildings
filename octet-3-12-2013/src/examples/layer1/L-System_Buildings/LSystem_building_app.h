@@ -63,6 +63,7 @@ class LSystem_building_app : public app {
 		glEnable(GL_CULL_FACE);
 		glCullFace(GL_BACK);
 		glFrontFace(GL_CW);
+		glDisable(GL_CULL_FACE);
 		//*/
 
 		//glPolygonMode(GL_BACK, GL_LINE);
@@ -80,7 +81,7 @@ class LSystem_building_app : public app {
 				char c = '0' + i;
 				if(is_key_down(c))
 				{
-					sprintf(buf, "%c.txt", c);
+					sprintf(buf, "..\\..\\assets\\%c.txt", c);
 					l.load(buf);
 					key_cool_down = current_time;
 				}

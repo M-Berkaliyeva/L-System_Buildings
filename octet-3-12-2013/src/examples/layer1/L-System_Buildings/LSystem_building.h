@@ -63,6 +63,8 @@ namespace octet
 		std::string output_str;
 		dynarray<vec3> mesh;
 		dynarray<vec2> uvs;
+		dynarray<vec3> floor_mesh;
+		dynarray<vec2> floor_uvs;
 		std::string letters;
 		dynarray<stochastic_rule> rules;
 		state current_state;
@@ -77,7 +79,8 @@ namespace octet
 		mat4t m_rotate_y_180;
 		mat4t m_rotate_z_180;
 		vec3 initial_pos;
-		GLuint branch_tex;
+		GLuint wall_tex;
+		GLuint floor_tex;
 		float angle;
 		float branch_length;
 		float branch_length_decrement;
@@ -142,7 +145,8 @@ namespace octet
 		//load rule configuration file from a given path
 		void load(char *path) 	
 		{
-			branch_tex = resources::get_texture_handle(GL_RGB, "!bricks");
+			wall_tex = resources::get_texture_handle(GL_RGB, "!bricks");
+			floor_tex = resources::get_texture_handle(GL_RGB, "#7F7F7FFF");
 			std::ifstream f(path, std::ios::in);
 			dynarray<std::string> strs;
 			rules.reset();
@@ -218,6 +222,36 @@ namespace octet
 			generate_mesh();
 		}
 
+		void ear_clipping_triangulation(dynarray<vec3> &polygon)
+		{
+			if(polygon.size() < 3)
+				return;
+			dynarray<vec3> temp_polygon;
+			temp_polygon.resize(polygon.size());
+			for(unsigned int i = 0; i < temp_polygon.size(); i++)
+			{
+				temp_polygon[i] = polygon[i];
+			}
+			polygon.reset();
+			int index = 0;
+			while(temp_polygon.size() != 3)
+			{
+				for(unsigned int i = 1; i < temp_polygon.size(); i++)
+				{
+					if(temp_polygon[index].y() < temp_polygon[i].y())
+						index = i;
+				}
+				polygon.push_back(temp_polygon[index]);
+				polygon.push_back(temp_polygon[(temp_polygon.size() + index - 1) % temp_polygon.size()]);
+				polygon.push_back(temp_polygon[(index + 1) % temp_polygon.size()]);
+				temp_polygon.erase(index);
+			}
+			polygon.push_back(temp_polygon[0]);
+			polygon.push_back(temp_polygon[1]);
+			polygon.push_back(temp_polygon[2]);
+
+		}
+
 		//render both branch mesh
 		void render()
 		{
@@ -225,10 +259,16 @@ namespace octet
 			glEnableVertexAttribArray(attribute_uv);
 
 			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, branch_tex);
+			glBindTexture(GL_TEXTURE_2D, wall_tex);
+			
 			glVertexAttribPointer(attribute_pos, 3, GL_FLOAT, GL_FALSE, 4*sizeof(float), (void *)&mesh[0]);
 			glVertexAttribPointer(attribute_uv, 2, GL_FLOAT, GL_FALSE, 4*sizeof(float), (void *)&uvs[0]);
 			glDrawArrays(GL_QUADS, 0, mesh.size());
+
+			glBindTexture(GL_TEXTURE_2D, floor_tex);
+			glVertexAttribPointer(attribute_pos, 3, GL_FLOAT, GL_FALSE, 4*sizeof(float), (void *)&floor_mesh[0]);
+			glVertexAttribPointer(attribute_uv, 2, GL_FLOAT, GL_FALSE, 4*sizeof(float), (void *)&floor_uvs[0]);
+			glDrawArrays(GL_TRIANGLES, 0, floor_mesh.size());
 		}
 
 		//generate the final string with current rule
@@ -266,6 +306,10 @@ namespace octet
 		void generate_mesh()
 		{
 			current_state.state::state(branch_length);
+			floor_mesh.reset();
+			floor_mesh.push_back(vec3(0, 1, 0));
+			floor_uvs.reset();
+			floor_uvs.push_back(vec2(.4f, .4f));
 			state_stack.reset();
 			mesh.reset();
 			uvs.reset();
@@ -277,7 +321,7 @@ namespace octet
 				case 'K':
 					break;
 				case 'F':
-					branch();
+					extend();
 					break;
 				case '[':
 					push();
@@ -294,6 +338,7 @@ namespace octet
 				}
 			}
 			enclose();
+			ear_clipping_triangulation(floor_mesh);
 		}
 
 		//decrease iteration count
@@ -372,7 +417,7 @@ namespace octet
 		}
 
 		// branch producing operation denoted by 'F'
-		void branch()
+		void extend()
 		{
 			vec3 vector_h(1, 0, 0), vector_v(0, 1, 0);
 			vec3 p0 = current_state.pos - vector_v;
@@ -390,7 +435,10 @@ namespace octet
 			uvs.push_back(uv1 + vec2(1, 0));
 			uvs.push_back(uv + vec2(1, 0));
 			current_state.pos += vector_h;
+			floor_mesh.push_back(current_state.pos + vector_v);
+			floor_uvs.push_back(vec2(.4f, .4f));
 			current_state.length -= branch_length_decrement;
+
 		}
 	};
 }
