@@ -226,30 +226,36 @@ namespace octet
 		{
 			if(polygon.size() < 3)
 				return;
-			dynarray<vec3> temp_polygon;
-			temp_polygon.resize(polygon.size());
-			for(unsigned int i = 0; i < temp_polygon.size(); i++)
+			circular_list<vec3> polygon_list;
+			
+			int size = polygon.size();
+			for(int i = 0; i < size; i++)
 			{
-				temp_polygon[i] = polygon[i];
+				polygon_list.push_back(polygon[i]);
 			}
 			polygon.reset();
-			int index;
-			while(temp_polygon.size() != 3)
+			while(size != 3)
 			{
-				index = 0;
-				for(unsigned int i = 1; i < temp_polygon.size(); i++)
+				circular_list<vec3>::iterator iter = polygon_list.begin();
+				circular_list<vec3>::iterator max_iter = polygon_list.begin();
+				for(int i = 0; i < polygon_list.size(); i++)
 				{
-					if(temp_polygon[index].z() < temp_polygon[i].z())
-						index = i;
+					if(max_iter->z() < iter->z())
+						max_iter = iter;
+					++iter;
 				}
-				polygon.push_back(temp_polygon[index]);
-				polygon.push_back(temp_polygon[(temp_polygon.size() + index - 1) % temp_polygon.size()]);
-				polygon.push_back(temp_polygon[(index + 1) % temp_polygon.size()]);
-				temp_polygon.erase(index);
+				polygon.push_back(*max_iter);
+				circular_list<vec3>::iterator pre_iter = max_iter;
+				circular_list<vec3>::iterator next_iter = max_iter;
+				polygon.push_back(*--pre_iter);
+				polygon.push_back(*++next_iter);
+				polygon_list.remove(max_iter);
+				size--;
 			}
-			polygon.push_back(temp_polygon[0]);
-			polygon.push_back(temp_polygon[1]);
-			polygon.push_back(temp_polygon[2]);
+			circular_list<vec3>::iterator iter = polygon_list.begin();
+			polygon.push_back(*iter);
+			polygon.push_back(*++iter);
+			polygon.push_back(*++iter);
 		}
 
 		//render both branch mesh

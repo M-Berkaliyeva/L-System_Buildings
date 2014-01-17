@@ -23,6 +23,7 @@
 #include <string>
 #include <fstream>
 #include <time.h>
+#include "L-System_Buildings/circular_list.h"
 #include "L-System_Buildings/LSystem_building.h"
 #include "L-System_Buildings/LSystem_building_app.h"
 
