@@ -1,12 +1,12 @@
 angle
-25.7
+25
 branch length
-1
-iteration
 2
+iteration
+1
 axiom
 F
 letters
 F
 rules
-F---F+F
+FK+FK+F+FK

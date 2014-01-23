@@ -63,6 +63,8 @@ namespace octet
 		std::string output_str;
 		dynarray<vec3> mesh;
 		dynarray<vec2> uvs;
+		dynarray<vec3> frame_mesh;
+		dynarray<vec2> frame_uvs;
 		dynarray<vec3> floor_mesh;
 		dynarray<vec2> floor_uvs;
 		std::string letters;
@@ -81,11 +83,17 @@ namespace octet
 		vec3 initial_pos;
 		GLuint wall_tex;
 		GLuint floor_tex;
+		GLuint frame_tex;
 		float angle;
 		float branch_length;
 		float branch_length_decrement;
 		int iteration;
 		bool is_stochastic;
+		float winSize;
+		float frameSize;
+		vec3 vector;
+		
+
 	public:
 		lsystem() : initial_pos(0, 0, 0)
 		{
@@ -98,6 +106,9 @@ namespace octet
 			m_rotate_z_180.rotateZ(180);
 			branch_length_decrement = 0;
 			is_stochastic = false;
+			winSize = 1.2f;
+			frameSize = 0.1f;
+			vector = vec3(1, 0, 0);
 		}
 
 		//get the current iteration count
@@ -146,6 +157,7 @@ namespace octet
 		void load(char *path) 	
 		{
 			wall_tex = resources::get_texture_handle(GL_RGB, "!bricks");
+			frame_tex = resources::get_texture_handle(GL_RGB, "#7F7F7FFF");
 			floor_tex = resources::get_texture_handle(GL_RGB, "!bricks");
 			std::ifstream f(path, std::ios::in);
 			dynarray<std::string> strs;
@@ -275,6 +287,11 @@ namespace octet
 			glVertexAttribPointer(attribute_pos, 3, GL_FLOAT, GL_FALSE, 4*sizeof(float), (void *)&floor_mesh[0]);
 			glVertexAttribPointer(attribute_uv, 2, GL_FLOAT, GL_FALSE, 4*sizeof(float), (void *)&floor_uvs[0]);
 			glDrawArrays(GL_TRIANGLES, 0, floor_mesh.size());
+
+			glBindTexture(GL_TEXTURE_2D, frame_tex);
+			glVertexAttribPointer(attribute_pos, 3, GL_FLOAT, GL_FALSE, 4*sizeof(float), (void *)&frame_mesh[0]);
+			glVertexAttribPointer(attribute_uv, 2, GL_FLOAT, GL_FALSE, 4*sizeof(float), (void *)&frame_uvs[0]);
+			glDrawArrays(GL_QUADS, 0, frame_mesh.size());
 		}
 
 		//generate the final string with current rule
@@ -323,6 +340,7 @@ namespace octet
 				switch(output_str[i])
 				{
 				case 'K':
+					cutWindow();
 					break;
 				case 'F':
 					extend();
@@ -429,10 +447,11 @@ namespace octet
 		// branch producing operation denoted by 'F'
 		void extend()
 		{
-			vec3 vector_h((float)current_state.length, 0.f, 0.f), vector_v(0, 1, 0);
+			vec3 vector_h, vector_v(0, 1, 0);
 			vec3 p0 = current_state.pos - vector_v;
-			vec3 p1 = current_state.pos + vector_v;
-			vector_h = vector_h * current_state.m;
+			vec3 p1 = current_state.pos + vector_v;			
+			vector = vector * current_state.m;
+			vector_h = vector * (float)current_state.length;
 			vec3 p2 = p1 + vector_h;
 			vec3 p3 = p0 + vector_h;
 			mesh.push_back(p0);
@@ -449,6 +468,361 @@ namespace octet
 			floor_uvs.push_back(vec2(current_state.pos.x(), current_state.pos.z()));
 			current_state.length -= branch_length_decrement;
 
+		}
+
+		void cutWindow()
+		{
+			int size = mesh.size();
+			int uvSize = uvs.size();
+			float halfWidth = winSize/2;
+			//store last 4 points from floor_mesh as current wall 
+			vec3 p0 = mesh[size-4];
+			vec3 p1 = mesh[size-3];
+			vec3 p2 = mesh[size-2];
+			vec3 p3 = mesh[size-1];
+
+			//find midpoint on the left edge of the wall
+			float t = 0.5f;			
+			vec3 left_midpoint = (1-t)*p0 + t*p1;
+			//find distance to the middle of the wall
+			float dist = branch_length/2;
+			
+			//find vector after rotation
+			vec3 vector_h = vector * halfWidth;
+			vec3 vector_v(.0f, halfWidth, .0f);
+			
+			//find  midpoint after rotation
+			vec3 midpoint = left_midpoint + dist * vector;
+
+			//find four points of the window
+			vec3 wp0 = midpoint - vector_h - vector_v;//bottom left
+			vector_v = vector_v * 2;
+			vector_h = vector_h * 2;
+			vec3 wp1 = wp0 + vector_v;//top left
+			vec3 wp2 = wp1 + vector_h;//top right
+			vec3 wp3 = wp0 + vector_h;//bottom right
+
+			//find relative uv coordinates
+			vec2 uv_p0(0, 0);
+			vec2 uv_p1(0, 1);
+			vec2 uv_p2(1, 1);
+			vec2 uv_p3(1, 0);
+
+			float denom_u = (p3.x() - p0.x());
+			float denom_v = (p1.y() - p0.y());
+
+			float u_wp0 = (wp0.x() - p0.x())/denom_u;
+			float v_wp0 = (wp0.y() - p0.y())/denom_v;
+			float u_wp1 = (wp1.x() - p0.x())/denom_u;
+			float v_wp1 = (wp1.y() - p0.y())/denom_v;
+			float u_wp2 = (wp2.x() - p0.x())/denom_u;
+			float v_wp2 = (wp2.y() - p0.y())/denom_v;
+			float u_wp3 = (wp3.x() - p0.x())/denom_u;
+			float v_wp3 = (wp3.y() - p0.y())/denom_v;
+
+
+			float uv_winSize = winSize /(p3.x() - p0.x());
+
+			vec2 uv_wp0(u_wp0, v_wp0);
+			vec2 uv_wp1(u_wp1, v_wp1);//u_wp0, v_wp0 + winSize);
+			vec2 uv_wp2(u_wp2, v_wp2);//u_wp0 + winSize, v_wp0 + winSize);
+			vec2 uv_wp3(u_wp3, v_wp3);//u_wp0 + winSize, v_wp0);
+
+			////remove 4 old mesh points from the dynarray
+			//mesh.erase(size-1);
+			//mesh.erase(size-2);
+			//mesh.erase(size-3);
+			//mesh.erase(size-4);
+
+			////remove 4 od uv coords
+			//uvs.erase(uvSize-1);
+			//uvs.erase(uvSize-2);
+			//uvs.erase(uvSize-3);
+			//uvs.erase(uvSize-4);
+			
+			//add 4 new quads to the dynarray
+			//instead of erazing -> rewrite last four elements of mesh and uvs
+
+			//mesh 1: p0, p1, wp1, wp0
+			mesh[size-4] = p0;//mesh.push_back(p0);
+			mesh[size-3] = p1;//mesh.push_back(p1);
+			mesh[size-2] = wp1;//mesh.push_back(wp1);
+			mesh[size-1] = wp0;//mesh.push_back(wp0);
+			//mesh 1: uvs	
+			uvs[uvSize-4] = uv_p0;//uvs.push_back(uv_p0);
+			uvs[uvSize-3] = uv_p1;//uvs.push_back(uv_p1);
+			uvs[uvSize-2] = uv_wp1;//uvs.push_back(uv_wp1);
+			uvs[uvSize-1] = uv_wp0;//uvs.push_back(uv_wp0);
+
+			//mesh 2: wp1, p1, p2, wp2
+			mesh.push_back(wp1);
+			mesh.push_back(p1);
+			mesh.push_back(p2);
+			mesh.push_back(wp2);
+			//mesh 2: uvs
+			uvs.push_back(uv_wp1);
+			uvs.push_back(uv_p1);
+			uvs.push_back(uv_p2);
+			uvs.push_back(uv_wp2);
+
+			//mesh 3: wp3, wp2, p2, p3
+			mesh.push_back(wp3);
+			mesh.push_back(wp2);
+			mesh.push_back(p2);
+			mesh.push_back(p3);
+			//mesh 3: uvs
+			uvs.push_back(uv_wp3);
+			uvs.push_back(uv_wp2);
+			uvs.push_back(uv_p2);
+			uvs.push_back(uv_p3);
+
+			//mesh 4: p0, wp0, wp3, p3
+			mesh.push_back(p0);
+			mesh.push_back(wp0);
+			mesh.push_back(wp3);
+			mesh.push_back(p3);
+			//mesh 4: uvs
+			uvs.push_back(uv_p0);
+			uvs.push_back(uv_wp0);
+			uvs.push_back(uv_wp3);
+			uvs.push_back(uv_p3);
+
+			makeWindowFrame(wp0, wp1, wp2, wp3); 
+		}
+
+		void makeWindowFrame(vec3 &wp0, vec3 &wp1, vec3 &wp2, vec3 &wp3)
+		{
+			float halfFrameSize = frameSize/2;
+			float outerSize = winSize + frameSize;
+			float innerSize = winSize - frameSize;
+
+			//find vectors to get fist 4 frame points of wp0
+			vec3 vector_x = vector * halfFrameSize;//(halfFrameSize, .0f, .0f);
+			vec3 vector_y(.0f, halfFrameSize, .0f);			
+			vec3 vector_z(.0f, .0f, halfFrameSize);
+
+			//find vectors to get the rest of 3x4 frame point of other 3 window points
+			vec3 inner_y(.0f, innerSize, .0f), outer_y(.0f, outerSize, .0f), inner_x, outer_x;
+			inner_x = vector * innerSize;
+			outer_x = vector * outerSize;
+
+			//find 16 points of the window frame
+			//wp0: wp0_fp0, wp0_fp1, wp0_fp2, wp0_fp3
+			vec3 wp0_fp0 = wp0 + vector_y + vector_z;
+			vector_y *= 2;
+			vector_z *= 2;
+			vec3 wp0_fp1 = wp0_fp0 - vector_y;
+			vec3 wp0_fp2 = wp0_fp1 - vector_z;
+			vec3 wp0_fp3 = wp0_fp0 - vector_z;
+
+			wp0_fp0 += vector_x;
+			wp0_fp1 -= vector_x;
+			wp0_fp2 -= vector_x;
+			wp0_fp3 += vector_x;
+
+			//wp1: wp1_fp0, wp1_fp1, wp1_fp2, wp1_fp3		
+
+			vec3 wp1_fp0 = wp0_fp0 + inner_y;
+			vec3 wp1_fp1 = wp0_fp1 + outer_y;
+			vec3 wp1_fp2 = wp0_fp2 + outer_y;
+			vec3 wp1_fp3 = wp0_fp3 + inner_y;
+
+			//wp2: wp2_fp0, wp2_fp1, wp2_fp2, wp2_fp3
+			vec3 wp2_fp0 = wp1_fp0 + inner_x; 
+			vec3 wp2_fp1 = wp1_fp1 + outer_x;
+			vec3 wp2_fp2 = wp1_fp2 + outer_x;
+			vec3 wp2_fp3 = wp1_fp3 + inner_x;
+
+			//wp3: wp3_fp0, wp3_fp1, wp3_fp2, wp3_fp3
+			vec3 wp3_fp0 = wp0_fp0 + inner_x;
+			vec3 wp3_fp1 = wp0_fp1 + outer_x;
+			vec3 wp3_fp2 = wp0_fp2 + outer_x;
+			vec3 wp3_fp3 = wp0_fp3 + inner_x;
+
+
+			//create 16 frame meshes (16 because other 4 are not visible)
+
+			//edge1: left
+			//mesh_front: 
+			frame_mesh.push_back(wp0_fp1);
+			frame_mesh.push_back(wp1_fp1);
+			frame_mesh.push_back(wp1_fp0);
+			frame_mesh.push_back(wp0_fp0);
+			//uvs
+			vec2 uv(0, 0), uv1(0, 1);
+			frame_uvs.push_back(uv);
+			frame_uvs.push_back(uv1);
+			frame_uvs.push_back(uv1 + vec2(1, 0));
+			frame_uvs.push_back(uv + vec2(1, 0));
+
+			//mesh_outer:
+			frame_mesh.push_back(wp0_fp2);
+			frame_mesh.push_back(wp1_fp2);
+			frame_mesh.push_back(wp1_fp1);
+			frame_mesh.push_back(wp0_fp1);
+			//uvs
+			frame_uvs.push_back(uv);
+			frame_uvs.push_back(uv1);
+			frame_uvs.push_back(uv1 + vec2(1, 0));
+			frame_uvs.push_back(uv + vec2(1, 0));
+
+			//mesh_back:
+			frame_mesh.push_back(wp0_fp3);
+			frame_mesh.push_back(wp1_fp3);
+			frame_mesh.push_back(wp1_fp2);
+			frame_mesh.push_back(wp0_fp2);
+			//uvs
+			frame_uvs.push_back(uv);
+			frame_uvs.push_back(uv1);
+			frame_uvs.push_back(uv1 + vec2(1, 0));
+			frame_uvs.push_back(uv + vec2(1, 0));
+
+			//mesh_inner:
+			frame_mesh.push_back(wp0_fp0);
+			frame_mesh.push_back(wp1_fp0);
+			frame_mesh.push_back(wp1_fp3);
+			frame_mesh.push_back(wp0_fp3);
+			//uvs
+			frame_uvs.push_back(uv);
+			frame_uvs.push_back(uv1);
+			frame_uvs.push_back(uv1 + vec2(1, 0));
+			frame_uvs.push_back(uv + vec2(1, 0));
+
+			//edge2: top
+			//mesh_front: 
+			frame_mesh.push_back(wp1_fp0);
+			frame_mesh.push_back(wp1_fp1);
+			frame_mesh.push_back(wp2_fp1);
+			frame_mesh.push_back(wp2_fp0);
+			//uvs
+			frame_uvs.push_back(uv);
+			frame_uvs.push_back(uv1);
+			frame_uvs.push_back(uv1 + vec2(1, 0));
+			frame_uvs.push_back(uv + vec2(1, 0));
+
+			//mesh_outer:
+			frame_mesh.push_back(wp1_fp1);
+			frame_mesh.push_back(wp1_fp2);
+			frame_mesh.push_back(wp2_fp2);
+			frame_mesh.push_back(wp2_fp1);
+			//uvs
+			frame_uvs.push_back(uv);
+			frame_uvs.push_back(uv1);
+			frame_uvs.push_back(uv1 + vec2(1, 0));
+			frame_uvs.push_back(uv + vec2(1, 0));
+
+			//mesh_back:
+			frame_mesh.push_back(wp1_fp2);
+			frame_mesh.push_back(wp1_fp3);
+			frame_mesh.push_back(wp2_fp3);
+			frame_mesh.push_back(wp2_fp2);
+			//uvs
+			frame_uvs.push_back(uv);
+			frame_uvs.push_back(uv1);
+			frame_uvs.push_back(uv1 + vec2(1, 0));
+			frame_uvs.push_back(uv + vec2(1, 0));
+
+			//mesh_inner:
+			frame_mesh.push_back(wp1_fp3);
+			frame_mesh.push_back(wp1_fp0);
+			frame_mesh.push_back(wp2_fp0);
+			frame_mesh.push_back(wp2_fp3);
+			//uvs
+			frame_uvs.push_back(uv);
+			frame_uvs.push_back(uv1);
+			frame_uvs.push_back(uv1 + vec2(1, 0));
+			frame_uvs.push_back(uv + vec2(1, 0));
+
+
+			//edge3: right
+			//mesh_front: 
+			frame_mesh.push_back(wp3_fp0);
+			frame_mesh.push_back(wp2_fp0);
+			frame_mesh.push_back(wp2_fp1);
+			frame_mesh.push_back(wp3_fp1);
+			//uvs
+			frame_uvs.push_back(uv);
+			frame_uvs.push_back(uv1);
+			frame_uvs.push_back(uv1 + vec2(1, 0));
+			frame_uvs.push_back(uv + vec2(1, 0));
+
+			//mesh_outer:
+			frame_mesh.push_back(wp3_fp1);
+			frame_mesh.push_back(wp2_fp1);
+			frame_mesh.push_back(wp2_fp2);
+			frame_mesh.push_back(wp3_fp2);
+			//uvs
+			frame_uvs.push_back(uv);
+			frame_uvs.push_back(uv1);
+			frame_uvs.push_back(uv1 + vec2(1, 0));
+			frame_uvs.push_back(uv + vec2(1, 0));
+
+			//mesh_back:
+			frame_mesh.push_back(wp3_fp2);
+			frame_mesh.push_back(wp2_fp2);
+			frame_mesh.push_back(wp2_fp3);
+			frame_mesh.push_back(wp3_fp3);
+			//uvs
+			frame_uvs.push_back(uv);
+			frame_uvs.push_back(uv1);
+			frame_uvs.push_back(uv1 + vec2(1, 0));
+			frame_uvs.push_back(uv + vec2(1, 0));
+
+			//mesh_inner:
+			frame_mesh.push_back(wp3_fp3);
+			frame_mesh.push_back(wp2_fp3);
+			frame_mesh.push_back(wp2_fp0);
+			frame_mesh.push_back(wp3_fp0);
+			//uvs
+			frame_uvs.push_back(uv);
+			frame_uvs.push_back(uv1);
+			frame_uvs.push_back(uv1 + vec2(1, 0));
+			frame_uvs.push_back(uv + vec2(1, 0));
+
+			//edge4: bottom
+			//mesh_front: 
+			frame_mesh.push_back(wp0_fp1);
+			frame_mesh.push_back(wp0_fp0);
+			frame_mesh.push_back(wp3_fp0);
+			frame_mesh.push_back(wp3_fp1);
+			//uvs
+			frame_uvs.push_back(uv);
+			frame_uvs.push_back(uv1);
+			frame_uvs.push_back(uv1 + vec2(1, 0));
+			frame_uvs.push_back(uv + vec2(1, 0));
+
+			//mesh_outer:
+			frame_mesh.push_back(wp0_fp2);
+			frame_mesh.push_back(wp0_fp1);
+			frame_mesh.push_back(wp3_fp1);
+			frame_mesh.push_back(wp3_fp2);
+			//uvs
+			frame_uvs.push_back(uv);
+			frame_uvs.push_back(uv1);
+			frame_uvs.push_back(uv1 + vec2(1, 0));
+			frame_uvs.push_back(uv + vec2(1, 0));
+
+			//mesh_back:
+			frame_mesh.push_back(wp0_fp3);
+			frame_mesh.push_back(wp0_fp2);
+			frame_mesh.push_back(wp3_fp2);
+			frame_mesh.push_back(wp3_fp3);
+			//uvs
+			frame_uvs.push_back(uv);
+			frame_uvs.push_back(uv1);
+			frame_uvs.push_back(uv1 + vec2(1, 0));
+			frame_uvs.push_back(uv + vec2(1, 0));
+
+			//mesh_inner:
+			frame_mesh.push_back(wp0_fp0);
+			frame_mesh.push_back(wp0_fp3);
+			frame_mesh.push_back(wp3_fp3);
+			frame_mesh.push_back(wp3_fp0);
+			//uvs
+			frame_uvs.push_back(uv);
+			frame_uvs.push_back(uv1);
+			frame_uvs.push_back(uv1 + vec2(1, 0));
+			frame_uvs.push_back(uv + vec2(1, 0));
 		}
 	};
 }
