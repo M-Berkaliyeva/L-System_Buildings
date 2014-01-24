@@ -1,3 +1,7 @@
+floor thickness
+.4
+extension length
+.3
 wall height
 2
 floor count
