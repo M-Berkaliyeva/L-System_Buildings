@@ -6,20 +6,23 @@ namespace octet
 	{
 		struct state
 		{
-			state() : pos(0, 0, 0)
+			state() : pos(0, 0, 0),
+			u(0)
 			{
 				m.loadIdentity();
 				length = 0;
 			}
 
 			state(float l) : pos(0, 0, 0),
-				length(l)
+				length(l),
+				u(0)
 			{
 				m.loadIdentity(); 
 			}
 
 			vec3 pos;
 			float length;
+			float u;
 			mat4t m;
 		};
 
@@ -88,14 +91,16 @@ namespace octet
 		float branch_length;
 		float branch_length_decrement;
 		int iteration;
-		bool is_stochastic;
+		int floor_count;
 		float winSize;
 		float frameSize;
 		vec3 vector;
+		bool is_stochastic;
 		
 
 	public:
-		lsystem() : initial_pos(0, 0, 0)
+		lsystem() : initial_pos(0, 0, 0),
+		floor_count(2)
 		{
 			srand((DWORD)time(NULL));
 			m_rotate_x_180.loadIdentity();
@@ -157,8 +162,8 @@ namespace octet
 		void load(char *path) 	
 		{
 			wall_tex = resources::get_texture_handle(GL_RGB, "!bricks");
-			frame_tex = resources::get_texture_handle(GL_RGB, "#7F7F7FFF");
-			floor_tex = resources::get_texture_handle(GL_RGB, "!bricks");
+			frame_tex = resources::get_texture_handle(GL_RGB, "#FFFFFFFF");
+			floor_tex = resources::get_texture_handle(GL_RGB, "#7f7f7fff");
 			std::ifstream f(path, std::ios::in);
 			dynarray<std::string> strs;
 			rules.reset();
@@ -182,6 +187,11 @@ namespace octet
 					{
 						getline(f, str);
 						sscanf(str.c_str(), "%f", &branch_length);
+					}
+					else if(str == "floor count")
+					{
+						getline(f, str);
+						sscanf(str.c_str(), "%d", &floor_count);
 					}
 					else if(str == "branch length decrement")
 					{
@@ -352,10 +362,10 @@ namespace octet
 					pop();
 					break;
 				case '+':
-					current_state.m = current_state.m * m_rotate_y_positive;
+					current_state.m = m_rotate_y_positive;
 					break;
 				case '-':
-					current_state.m = current_state.m * m_rotate_y_negative;
+					current_state.m = m_rotate_y_negative;
 					break;
 				}
 			}
@@ -428,44 +438,64 @@ namespace octet
 		//enclose the wall
 		void enclose()
 		{
-			vec3 vector_h(1, 0, 0), vector_v(0, 1, 0);
+			vec3 vector_h(1, 0, 0), vector_v(0, 1, 0), vector_2v(0.f, 2 * vector_v.y(), 0.f);
 			vec3 p0 = current_state.pos - vector_v;
 			vec3 p1 = current_state.pos + vector_v;
 			vec3 p2 = initial_pos + vector_v;
 			vec3 p3 = initial_pos - vector_v;
-			mesh.push_back(p0);
-			mesh.push_back(p1);
-			mesh.push_back(p2);
-			mesh.push_back(p3);
-			vec2 uv(0, 0), uv1(0, 1);
-			uvs.push_back(uv);
-			uvs.push_back(uv1);
-			uvs.push_back(uv1 + vec2(1, 0));
-			uvs.push_back(uv + vec2(1, 0));
+			float target_u = current_state.u + (initial_pos - current_state.pos).length();
+			vec2 uv(current_state.u, 0), uv1(current_state.u, 2), uv2(target_u, 2), uv3(target_u, 0);
+			for(int i = 0; i < floor_count; i++)
+			{
+				mesh.push_back(p0);
+				mesh.push_back(p1);
+				mesh.push_back(p2);
+				mesh.push_back(p3);
+				uvs.push_back(uv);
+				uvs.push_back(uv1);
+				uvs.push_back(uv2);
+				uvs.push_back(uv3);
+				p0 += vector_2v;
+				p1 += vector_2v;
+				p2 += vector_2v;
+				p3 += vector_2v;
+			}
 		}
 
 		// branch producing operation denoted by 'F'
 		void extend()
 		{
-			vec3 vector_h, vector_v(0, 1, 0);
+			vec3 vector_h, vector_v(0, 1, 0), vector_2v(0.f, 2 * vector_v.y(), 0.f), vector_floor_pos(current_state.pos);
 			vec3 p0 = current_state.pos - vector_v;
 			vec3 p1 = current_state.pos + vector_v;			
 			vector = vector * current_state.m;
-			vector_h = vector * (float)current_state.length;
+			vector_h = vector * current_state.length;
 			vec3 p2 = p1 + vector_h;
 			vec3 p3 = p0 + vector_h;
-			mesh.push_back(p0);
-			mesh.push_back(p1);
-			mesh.push_back(p2);
-			mesh.push_back(p3);
-			vec2 uv(0, 0), uv1(0, 2);
-			uvs.push_back(uv);
-			uvs.push_back(uv1);
-			uvs.push_back(uv1 + vec2(2, 0));
-			uvs.push_back(uv + vec2(2, 0));
+			float target_u = current_state.u + current_state.length;
+			vec2 uv(current_state.u, 0), uv1(current_state.u, 2), uv2(target_u, 2), uv3(target_u, 0);
+			for(int i = 0; i < floor_count; i++)
+			{
+				mesh.push_back(p0);
+				mesh.push_back(p1);
+				mesh.push_back(p2);
+				mesh.push_back(p3);
+				uvs.push_back(uv);
+				uvs.push_back(uv1);
+				uvs.push_back(uv2);
+				uvs.push_back(uv3);
+				vector_floor_pos += vector_v;
+				/*
+				floor_mesh.push_back(vector_floor_pos);
+				floor_uvs.push_back(vec2(current_state.pos.x(), current_state.pos.z()));
+				//*/
+				p0 += vector_2v;
+				p1 += vector_2v;
+				p2 += vector_2v;
+				p3 += vector_2v;
+			}
+			current_state.u = target_u;
 			current_state.pos += vector_h;
-			floor_mesh.push_back(current_state.pos + vector_v);
-			floor_uvs.push_back(vec2(current_state.pos.x(), current_state.pos.z()));
 			current_state.length -= branch_length_decrement;
 
 		}
