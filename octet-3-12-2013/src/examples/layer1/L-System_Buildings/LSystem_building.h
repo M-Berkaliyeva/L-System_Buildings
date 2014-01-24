@@ -282,12 +282,29 @@ namespace octet
 				floor_mesh_list.push_back(floor_mesh[i]);
 			}
 			int index = 0;
+			int max_z_index = 0;
+			circular_list<vec3>::iterator iter = floor_mesh_list.begin();
+			circular_list<vec3>::iterator max_z_iter = floor_mesh_list.begin();
+			circular_list<vec3>::iterator pre_iter;
+			circular_list<vec3>::iterator next_iter;
+			for(int i = 0; i < size; i++)
+			{
+				++iter;
+				if(max_z_iter->z() < iter->z())
+				{
+					max_z_iter = iter;
+				}
+			}
+			pre_iter = max_z_iter;
+			--pre_iter;
+			next_iter = max_z_iter;
+			++next_iter;
+			vec3 edge1 = *pre_iter - *max_z_iter, edge2 = *max_z_iter - *next_iter;
+			float convex_dir = edge1.x() * edge2.z() - edge1.z() * edge2.x();
 			while(size != 3)
 			{
-				circular_list<vec3>::iterator iter = floor_mesh_list.begin();
+				iter = floor_mesh_list.begin();
 				vec3 p0, p1, p2;
-				circular_list<vec3>::iterator pre_iter;
-				circular_list<vec3>::iterator next_iter;
 				for(int i = 0; i < floor_mesh_list.size(); i++, ++iter)
 				{
 					pre_iter = iter;
@@ -297,6 +314,10 @@ namespace octet
 					p2 = *++next_iter;
 					circular_list<vec3>::iterator iter1 = next_iter;
 					vec3 v1 = p0 - p1, v0 = p2 - p0, v2 = p1 - p2;
+					if((v1.x() * v2.z() - v1.z() * v2.x()) * convex_dir < 0)
+					{
+						continue;
+					}
 					bool has_found = true;
 					for(int j = 0; j < floor_mesh_list.size() - 3; j++)
 					{
@@ -326,7 +347,7 @@ namespace octet
 				floor_mesh_list.remove(iter);
 				size--;
 			}
-			circular_list<vec3>::iterator iter = floor_mesh_list.begin();
+			iter = floor_mesh_list.begin();
 			floor_mesh[index] = *iter;
 			floor_mesh[index + 1] = *++iter;
 			floor_mesh[index + 2] = *++iter;
@@ -425,6 +446,16 @@ namespace octet
 			enclose();
 
 			floor_board_vertex_count = floor_mesh.size();
+			//remove those leading three vertices to be colinear
+			for(int i = 0; i < floor_board_vertex_count - 2; i++)
+			{
+				if(abs(dot(normalize(floor_mesh[i] - floor_mesh[i + 1]), normalize(floor_mesh[i + 2] - floor_mesh[i + 1]))) > .999f)
+				{
+					floor_mesh.erase(i + 1);
+					i = -1;
+					floor_board_vertex_count--;
+				}
+			}
 			if(floor_board_vertex_count < 3)
 				return;
 
