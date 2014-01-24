@@ -195,7 +195,7 @@ namespace octet
 					else if(str == "wall height")
 					{
 						getline(f, str);
-						sscanf(str.c_str(), "%d", &wall_height);
+						sscanf(str.c_str(), "%f", &wall_height);
 					}
 					else if(str == "floor count")
 					{
@@ -253,40 +253,64 @@ namespace octet
 			generate_mesh();
 		}
 
-		void ear_clipping_triangulation(dynarray<vec3> &polygon)
+		void ear_clipping_triangulation()
 		{
-			if(polygon.size() < 3)
+			if(floor_mesh.size() < 3)
 				return;
-			circular_list<vec3> polygon_list;
+			circular_list<vec3> floor_mesh_list;
 			
-			int size = polygon.size();
+			int size = floor_mesh.size();
 			for(int i = 0; i < size; i++)
 			{
-				polygon_list.push_back(polygon[i]);
+				floor_mesh_list.push_back(floor_mesh[i]);
 			}
-			polygon.reset();
+			floor_mesh.reset();
 			while(size != 3)
 			{
-				circular_list<vec3>::iterator iter = polygon_list.begin();
-				circular_list<vec3>::iterator max_iter = polygon_list.begin();
-				for(int i = 0; i < polygon_list.size(); i++)
+				circular_list<vec3>::iterator iter = floor_mesh_list.begin();
+				vec3 p0, p1, p2;
+				circular_list<vec3>::iterator pre_iter;
+				circular_list<vec3>::iterator next_iter;
+				for(int i = 0; i < floor_mesh_list.size(); i++, ++iter)
 				{
-					if(max_iter->z() < iter->z())
-						max_iter = iter;
-					++iter;
+					pre_iter = iter;
+					next_iter = iter;
+					p0 = *--pre_iter;
+					p1 = *iter;
+					p2 = *++next_iter;
+					circular_list<vec3>::iterator iter1 = next_iter;
+					vec3 v1 = p0 - p1, v0 = p2 - p0, v2 = p1 - p2;
+					bool has_found = true;
+					for(int j = 0; j < floor_mesh_list.size() - 3; j++)
+					{
+						vec3 p(*++iter1);
+						vec3 v = p - p1;
+						float a = v.x() * v1.z() - v.z() * v1.x();
+						v = p - p0;
+						float b = v.x() * v0.z() - v.z() * v0.x();
+						v = p - p2;
+						float c = v.x() * v2.z() - v.z() * v2.x();
+						if(a * b > 0 && b * c > 0 && a * c > 0)
+						{
+							has_found = false;
+							break;
+						}
+					}
+					if(has_found)
+					{
+						break;
+					}
 				}
-				polygon.push_back(*max_iter);
-				circular_list<vec3>::iterator pre_iter = max_iter;
-				circular_list<vec3>::iterator next_iter = max_iter;
-				polygon.push_back(*--pre_iter);
-				polygon.push_back(*++next_iter);
-				polygon_list.remove(max_iter);
+				floor_mesh.push_back(*iter);
+				floor_mesh.push_back(*pre_iter);
+				floor_mesh.push_back(*next_iter);
+				floor_mesh_list.remove(iter);
 				size--;
 			}
-			circular_list<vec3>::iterator iter = polygon_list.begin();
-			polygon.push_back(*iter);
-			polygon.push_back(*++iter);
-			polygon.push_back(*++iter);
+			circular_list<vec3>::iterator iter = floor_mesh_list.begin();
+			floor_mesh.push_back(*iter);
+			floor_mesh.push_back(*++iter);
+			floor_mesh.push_back(*++iter);
 		}
 
 		//render both branch mesh
@@ -298,18 +322,18 @@ namespace octet
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, wall_tex);
 			
-			glVertexAttribPointer(attribute_pos, 3, GL_FLOAT, GL_FALSE, 4*sizeof(float), (void *)&mesh[0]);
-			glVertexAttribPointer(attribute_uv, 2, GL_FLOAT, GL_FALSE, 4*sizeof(float), (void *)&uvs[0]);
+			glVertexAttribPointer(attribute_pos, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)&mesh[0]);
+			glVertexAttribPointer(attribute_uv, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void *)&uvs[0]);
 			glDrawArrays(GL_QUADS, 0, mesh.size());
 
 			glBindTexture(GL_TEXTURE_2D, floor_tex);
-			glVertexAttribPointer(attribute_pos, 3, GL_FLOAT, GL_FALSE, 4*sizeof(float), (void *)&floor_mesh[0]);
-			glVertexAttribPointer(attribute_uv, 2, GL_FLOAT, GL_FALSE, 4*sizeof(float), (void *)&floor_uvs[0]);
+			glVertexAttribPointer(attribute_pos, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)&floor_mesh[0]);
+			glVertexAttribPointer(attribute_uv, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void *)&floor_uvs[0]);
 			glDrawArrays(GL_TRIANGLES, 0, floor_mesh.size());
 
 			glBindTexture(GL_TEXTURE_2D, frame_tex);
-			glVertexAttribPointer(attribute_pos, 3, GL_FLOAT, GL_FALSE, 4*sizeof(float), (void *)&frame_mesh[0]);
-			glVertexAttribPointer(attribute_uv, 2, GL_FLOAT, GL_FALSE, 4*sizeof(float), (void *)&frame_uvs[0]);
+			glVertexAttribPointer(attribute_pos, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)&frame_mesh[0]);
+			glVertexAttribPointer(attribute_uv, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void *)&frame_uvs[0]);
 			glDrawArrays(GL_QUADS, 0, frame_mesh.size());
 		}
 
@@ -363,6 +387,7 @@ namespace octet
 					break;
 				case 'F':
 					extend();
+					current_state.m.loadIdentity();
 					break;
 				case '[':
 					push();
@@ -371,24 +396,70 @@ namespace octet
 					pop();
 					break;
 				case '+':
-					current_state.m = m_rotate_y_positive;
+					current_state.m = current_state.m * m_rotate_y_positive;
 					break;
 				case '-':
-					current_state.m = m_rotate_y_negative;
+					current_state.m = current_state.m * m_rotate_y_negative;
 					break;
 				}
 			}
 			enclose();
-			//generate floor meshs
-			ear_clipping_triangulation(floor_mesh);
+
+			extend_floor_mesh();
+
+			//generate general floor mesh
+			ear_clipping_triangulation();
+
+
+			create_floor_mesh_for_each_floor();
+		}
+
+		void extend_floor_mesh()
+		{
+			const float extension_length = .3f;
+			if(floor_mesh.size() < 3)
+				return;
+			vec3 start = floor_mesh[1] - floor_mesh[0];
+			vec3 end = floor_mesh[0] - floor_mesh[floor_mesh.size() - 1];
+			float dir = cross(start, end).y();
+			vec3 v = floor_mesh[0];
+			floor_mesh.resize(floor_mesh.size() + 2);
+			floor_mesh[floor_mesh.size() - 2] = floor_mesh[0];
+			floor_mesh[floor_mesh.size() - 1] = floor_mesh[1];
+			for(unsigned int i = 0; i < floor_mesh.size() - 2; i++)
+			{
+				int index1 = i + 1;
+				vec3 v1 = floor_mesh[index1] - v;
+				v = floor_mesh[index1];
+				vec3 v2 = floor_mesh[i + 2] - floor_mesh[index1];
+				v1 = v1.normalize();
+				v2 = v2.normalize();
+				//get new point position after extension
+				vec3 upright(v1.z(), 0.f, -v1.x());
+				vec3 v3 = (v1 - v2).normalize();
+				if(cross(v2, v1).y() * dir < 0)
+				{
+					v3 = -v3;
+				}
+				float bisector_length = abs(extension_length / dot(upright, v3));
+				floor_mesh[index1] += v3 * bisector_length;
+			}
+			floor_mesh[0] = floor_mesh[floor_mesh.size() - 2];
+			floor_mesh.pop_back();
+			floor_mesh.pop_back();
+		}
+
+		void create_floor_mesh_for_each_floor()
+		{
 			int vertex_count = floor_mesh.size();
-			floor_uvs.resize((floor_count + 1) * vertex_count);
+			int floor_board_count = floor_count + 1;
+			floor_uvs.resize(floor_board_count * vertex_count);
 			for(int i = 0; i < vertex_count; i++)
 			{
 				floor_uvs[i] = vec2(floor_mesh[i].x(), floor_mesh[i].z());
 			}
-			floor_mesh.resize((floor_count + 1) * vertex_count);
-			for(int i = 1; i < floor_count + 1; i++)
+			floor_mesh.resize(floor_board_count * vertex_count);
+			for(int i = 1; i < floor_board_count; i++)
 			{
 				int index = vertex_count * i;
 				float y = wall_height * i;

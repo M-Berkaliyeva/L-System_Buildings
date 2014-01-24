@@ -1,3 +1,5 @@
+wall height
+2
 floor count
 2
 angle
@@ -11,4 +13,4 @@ F
 letters
 F
 rules
-FK+FK+F+FK
+FK+FK-F-F+FK+FK+F+F+F

@@ -36,7 +36,13 @@ class LSystem_building_app : public app {
 		// put the camera a short distance from the center, looking towards the triangle
 		cameraToWorld.loadIdentity();
 		cameraToWorld.rotateX(-20);
-		cameraToWorld.translate(0, 2.5, 8);
+		cameraToWorld.translate(0, 2.5, 20);
+		///*
+		glEnable(GL_CULL_FACE);
+		glCullFace(GL_BACK);
+		glFrontFace(GL_CW);
+		glDisable(GL_CULL_FACE);
+		//*/
 	}
 
 	// this is called to draw the world
@@ -59,16 +65,8 @@ class LSystem_building_app : public app {
 
 		vec4 color(0, 1, 0, 1);
 		texture_shader_.render(modelToProjection, 0);
-		///*
-		glEnable(GL_CULL_FACE);
-		glCullFace(GL_BACK);
-		glFrontFace(GL_CW);
-		glDisable(GL_CULL_FACE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);		
-		//*/
 
-		//glPolygonMode(GL_BACK, GL_LINE);
+		//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
 
 		// attribute_pos (=0) is position of each corner

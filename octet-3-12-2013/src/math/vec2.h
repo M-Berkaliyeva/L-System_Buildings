@@ -23,7 +23,7 @@ namespace octet {
         this->m = m;
       }
     #else
-      float v[3];
+      float v[2];
     #endif
   public:
     // default constructor: note does not initialize!

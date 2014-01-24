@@ -72,6 +72,10 @@ namespace octet
 			item *node;
 			friend class circular_list;
 		public:
+			iterator() : node(NULL)
+			{
+			}
+
 			iterator(item *i) : node(i)
 			{
 			}
