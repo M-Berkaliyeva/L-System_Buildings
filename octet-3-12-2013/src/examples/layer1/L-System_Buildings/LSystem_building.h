@@ -92,6 +92,7 @@ namespace octet
 		float branch_length_decrement;
 		int iteration;
 		int floor_count;
+		float wall_height;
 		float winSize;
 		float frameSize;
 		vec3 vector;
@@ -100,7 +101,8 @@ namespace octet
 
 	public:
 		lsystem() : initial_pos(0, 0, 0),
-		floor_count(2)
+		floor_count(2),
+		wall_height(2)
 		{
 			srand((DWORD)time(NULL));
 			m_rotate_x_180.loadIdentity();
@@ -168,6 +170,8 @@ namespace octet
 			dynarray<std::string> strs;
 			rules.reset();
 			branch_length_decrement = 0;
+			wall_height = 2;
+			floor_count = 1;
 			is_stochastic = false;
 			if(f)
 			{
@@ -187,6 +191,11 @@ namespace octet
 					{
 						getline(f, str);
 						sscanf(str.c_str(), "%f", &branch_length);
+					}
+					else if(str == "wall height")
+					{
+						getline(f, str);
+						sscanf(str.c_str(), "%d", &wall_height);
 					}
 					else if(str == "floor count")
 					{
@@ -340,7 +349,7 @@ namespace octet
 		{
 			current_state.state::state(branch_length);
 			floor_mesh.reset();
-			floor_mesh.push_back(vec3(0, 1, 0));
+			floor_uvs.reset();
 			state_stack.reset();
 			mesh.reset();
 			uvs.reset();
@@ -370,12 +379,24 @@ namespace octet
 				}
 			}
 			enclose();
+			//generate floor meshs
 			ear_clipping_triangulation(floor_mesh);
-			floor_uvs.reset();
-			floor_uvs.resize(floor_mesh.size());
-			for(unsigned int i = 0; i < floor_mesh.size(); i++)
+			int vertex_count = floor_mesh.size();
+			floor_uvs.resize((floor_count + 1) * vertex_count);
+			for(int i = 0; i < vertex_count; i++)
 			{
 				floor_uvs[i] = vec2(floor_mesh[i].x(), floor_mesh[i].z());
+			}
+			floor_mesh.resize((floor_count + 1) * vertex_count);
+			for(int i = 1; i < floor_count + 1; i++)
+			{
+				int index = vertex_count * i;
+				float y = wall_height * i;
+				for(int j = 0; j < vertex_count; j++)
+				{
+					floor_mesh[index + j] = floor_mesh[j] + vec3(0.f, y, 0.f);
+					floor_uvs[index + j] = vec2(floor_mesh[j].x(), floor_mesh[j].z());
+				}
 			}
 		}
 
@@ -438,13 +459,13 @@ namespace octet
 		//enclose the wall
 		void enclose()
 		{
-			vec3 vector_h(1, 0, 0), vector_v(0, 1, 0), vector_2v(0.f, 2 * vector_v.y(), 0.f);
-			vec3 p0 = current_state.pos - vector_v;
+			vec3 vector_h(1, 0, 0), vector_v(0.f, wall_height, 0.f);
+			vec3 p0 = current_state.pos;
 			vec3 p1 = current_state.pos + vector_v;
 			vec3 p2 = initial_pos + vector_v;
-			vec3 p3 = initial_pos - vector_v;
+			vec3 p3 = initial_pos;
 			float target_u = current_state.u + (initial_pos - current_state.pos).length();
-			vec2 uv(current_state.u, 0), uv1(current_state.u, 2), uv2(target_u, 2), uv3(target_u, 0);
+			vec2 uv(current_state.u, 0), uv1(current_state.u, wall_height), uv2(target_u, wall_height), uv3(target_u, 0);
 			for(int i = 0; i < floor_count; i++)
 			{
 				mesh.push_back(p0);
@@ -455,25 +476,27 @@ namespace octet
 				uvs.push_back(uv1);
 				uvs.push_back(uv2);
 				uvs.push_back(uv3);
-				p0 += vector_2v;
-				p1 += vector_2v;
-				p2 += vector_2v;
-				p3 += vector_2v;
+				p0 += vector_v;
+				p1 += vector_v;
+				p2 += vector_v;
+				p3 += vector_v;
 			}
+			floor_mesh.push_back(current_state.pos);
+			floor_uvs.push_back(vec2(current_state.pos.x(), current_state.pos.z()));
 		}
 
 		// branch producing operation denoted by 'F'
 		void extend()
 		{
-			vec3 vector_h, vector_v(0, 1, 0), vector_2v(0.f, 2 * vector_v.y(), 0.f), vector_floor_pos(current_state.pos);
-			vec3 p0 = current_state.pos - vector_v;
+			vec3 vector_h, vector_v(0.f, wall_height, 0.f);
+			vec3 p0 = current_state.pos;
 			vec3 p1 = current_state.pos + vector_v;			
 			vector = vector * current_state.m;
 			vector_h = vector * current_state.length;
 			vec3 p2 = p1 + vector_h;
 			vec3 p3 = p0 + vector_h;
 			float target_u = current_state.u + current_state.length;
-			vec2 uv(current_state.u, 0), uv1(current_state.u, 2), uv2(target_u, 2), uv3(target_u, 0);
+			vec2 uv(current_state.u, 0), uv1(current_state.u, wall_height), uv2(target_u, wall_height), uv3(target_u, 0);
 			for(int i = 0; i < floor_count; i++)
 			{
 				mesh.push_back(p0);
@@ -484,16 +507,13 @@ namespace octet
 				uvs.push_back(uv1);
 				uvs.push_back(uv2);
 				uvs.push_back(uv3);
-				vector_floor_pos += vector_v;
-				/*
-				floor_mesh.push_back(vector_floor_pos);
-				floor_uvs.push_back(vec2(current_state.pos.x(), current_state.pos.z()));
-				//*/
-				p0 += vector_2v;
-				p1 += vector_2v;
-				p2 += vector_2v;
-				p3 += vector_2v;
+				p0 += vector_v;
+				p1 += vector_v;
+				p2 += vector_v;
+				p3 += vector_v;
 			}
+			floor_mesh.push_back(current_state.pos);
+			floor_uvs.push_back(vec2(current_state.pos.x(), current_state.pos.z()));
 			current_state.u = target_u;
 			current_state.pos += vector_h;
 			current_state.length -= branch_length_decrement;

@@ -1,5 +1,5 @@
 floor count
-3
+2
 angle
 25
 branch length
