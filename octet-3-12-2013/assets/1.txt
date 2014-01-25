@@ -17,4 +17,4 @@ F
 letters
 F
 rules
-FK+FK-F-F+FK+FK+F+F+F
+F(0.50)K+FK-F-F+F(1.50)KK+FK+F+F+F

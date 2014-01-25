@@ -123,7 +123,7 @@ namespace octet
 			branch_length_decrement = 0;
 			is_stochastic = false;
 			winSize = 1.2f;
-			frameSize = 0.1f;
+			frameSize = 0.05f;
 			vector = vec3(1, 0, 0);
 			extension_length = .3f;
 		}
@@ -173,8 +173,8 @@ namespace octet
 		//load rule configuration file from a given path
 		void load(char *path) 	
 		{
-			wall_tex = resources::get_texture_handle(GL_RGB, "!bricks");
-			frame_tex = resources::get_texture_handle(GL_RGB, "#FFFFFFFF");
+			wall_tex = resources::get_texture_handle(GL_RGB, "assets/brick_wall.gif");//"!bricks");
+			frame_tex = resources::get_texture_handle(GL_RGB, "assets/test.gif");//"#FFFFFFFF");
 			floor_tex = resources::get_texture_handle(GL_RGB, "#7f7f7fff");
 			std::ifstream f(path, std::ios::in);
 			dynarray<std::string> strs;
@@ -422,10 +422,20 @@ namespace octet
 			mat4t m;
 			for(unsigned int i = 0; i < output_str.size(); i++)
 			{
+				std::string float_str = "";
 				switch(output_str[i])
 				{
 				case 'K':
 					cutWindow();
+					break;
+				case '(':						
+					//should be in his format : (1.00)
+					float_str.push_back(output_str[i+1]);
+					float_str.push_back(output_str[i+2]);
+					float_str.push_back(output_str[i+3]);
+					float_str.push_back(output_str[i+4]);
+					winSize = atof(float_str.c_str());
+					i+=5;
 					break;
 				case 'F':
 					extend();
@@ -759,7 +769,7 @@ namespace octet
 				uvs.erase(uvSize-i);
 			}			
 			for(int j = 0; j < curr_size; j = j+4)
-			{			
+			{				
 				//store last 4 points from floor_mesh as current wall 
 				vec3 p0 = current_walls[j];
 				vec3 p1 = current_walls[j+1];
@@ -835,6 +845,7 @@ namespace octet
 
 				makeWindowFrame(wp0, wp1, wp2, wp3); 
 			}	
+			winSize = 1.0f;//reset the window size back to default
 		}
 
 		void makeWindowFrame(vec3 &wp0, vec3 &wp1, vec3 &wp2, vec3 &wp3)
@@ -856,11 +867,9 @@ namespace octet
 			//find 16 points of the window frame
 			//wp0: wp0_fp0, wp0_fp1, wp0_fp2, wp0_fp3
 			vec3 wp0_fp0 = wp0 + vector_y + vector_z;
-			vector_y *= 2;
-			vector_z *= 2;
-			vec3 wp0_fp1 = wp0_fp0 - vector_y;
-			vec3 wp0_fp2 = wp0_fp1 - vector_z;
-			vec3 wp0_fp3 = wp0_fp0 - vector_z;
+			vec3 wp0_fp1 = wp0_fp0 - vector_y*2;
+			vec3 wp0_fp2 = wp0_fp1 - vector_z*2;
+			vec3 wp0_fp3 = wp0_fp0 - vector_z*2;
 
 			wp0_fp0 += vector_x;
 			wp0_fp1 -= vector_x;
@@ -886,6 +895,18 @@ namespace octet
 			vec3 wp3_fp2 = wp0_fp2 + outer_x;
 			vec3 wp3_fp3 = wp0_fp3 + inner_x;
 
+			//find points of mid-frame
+			float t = 0.5f;
+			vec3 midpoint = (1-t)*wp0_fp0 + t*wp3_fp0;
+			vec3 mpb_fp0 = midpoint - vector_x;
+			vec3 mpb_fp1 = mpb_fp0 - vector_z*2;
+			vec3 mpb_fp2 = mpb_fp1 + vector_x*2;
+			vec3 mpb_fp3 = mpb_fp0 + vector_x*2;
+
+			vec3 mpt_fp0 = mpb_fp0 + inner_y;
+			vec3 mpt_fp1 = mpb_fp1 + inner_y;
+			vec3 mpt_fp2 = mpb_fp2 + inner_y;
+			vec3 mpt_fp3 = mpb_fp3 + inner_y;
 
 			//create 16 frame meshes (16 because other 4 are not visible)
 
@@ -1065,6 +1086,49 @@ namespace octet
 			frame_mesh.push_back(wp0_fp3);
 			frame_mesh.push_back(wp3_fp3);
 			frame_mesh.push_back(wp3_fp0);
+			//uvs
+			frame_uvs.push_back(uv);
+			frame_uvs.push_back(uv1);
+			frame_uvs.push_back(uv1 + vec2(1, 0));
+			frame_uvs.push_back(uv + vec2(1, 0));
+
+			// + middle frame's 4 meshes
+			//mpb_fp0, mpb_fp1, mpb_fp2, mpb_fp3, mpt_fp0, mpt_fp1, mpt_fp2, mpt_fp3
+			//front
+			frame_mesh.push_back(mpb_fp0);
+			frame_mesh.push_back(mpt_fp0);
+			frame_mesh.push_back(mpt_fp3);
+			frame_mesh.push_back(mpb_fp3);
+			//uvs
+			frame_uvs.push_back(uv);
+			frame_uvs.push_back(uv1);
+			frame_uvs.push_back(uv1 + vec2(1, 0));
+			frame_uvs.push_back(uv + vec2(1, 0));
+			//left
+			frame_mesh.push_back(mpb_fp1);
+			frame_mesh.push_back(mpt_fp1);
+			frame_mesh.push_back(mpt_fp0);
+			frame_mesh.push_back(mpb_fp0);
+			//uvs
+			frame_uvs.push_back(uv);
+			frame_uvs.push_back(uv1);
+			frame_uvs.push_back(uv1 + vec2(1, 0));
+			frame_uvs.push_back(uv + vec2(1, 0));
+			//back
+			frame_mesh.push_back(mpb_fp2);
+			frame_mesh.push_back(mpt_fp2);
+			frame_mesh.push_back(mpt_fp1);
+			frame_mesh.push_back(mpb_fp1);
+			//uvs
+			frame_uvs.push_back(uv);
+			frame_uvs.push_back(uv1);
+			frame_uvs.push_back(uv1 + vec2(1, 0));
+			frame_uvs.push_back(uv + vec2(1, 0));
+			//right
+			frame_mesh.push_back(mpb_fp3);
+			frame_mesh.push_back(mpt_fp3);
+			frame_mesh.push_back(mpt_fp2);
+			frame_mesh.push_back(mpb_fp2);
 			//uvs
 			frame_uvs.push_back(uv);
 			frame_uvs.push_back(uv1);
