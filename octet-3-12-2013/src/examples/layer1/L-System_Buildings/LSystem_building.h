@@ -86,24 +86,350 @@ namespace octet
 		mat4t m_rotate_y_180;
 		mat4t m_rotate_z_180;
 		vec3 initial_pos;
+		vec3 vector;
+		//minimum point and maximum point of a bounding rectangle
+		vec3 min_point, max_point;
 		GLuint wall_tex;
 		GLuint floor_tex;
 		GLuint frame_tex;
-		float angle;
-		float branch_length;
-		float branch_length_decrement;
 		int iteration;
 		int floor_count;
 		int floor_board_vertex_count;
 		int floor_side_index;
+		float centre_of_ground_floor;
+		float angle;
+		float branch_length;
+		float branch_length_decrement;
 		float floor_board_thickness;
 		float wall_height;
+		float building_height;
 		float extension_length;
 		float winSize;
 		float frameSize;
-		vec3 vector;
 		bool is_stochastic;
 		
+		void ear_clipping_triangulation()
+		{
+			circular_list<vec3> floor_mesh_list;
+			
+			int size = floor_board_vertex_count;
+			for(int i = 0; i < size; i++)
+			{
+				floor_mesh_list.push_back(floor_mesh[i]);
+			}
+			int index = 0;
+			int max_z_index = 0;
+			circular_list<vec3>::iterator iter = floor_mesh_list.begin();
+			circular_list<vec3>::iterator max_z_iter = floor_mesh_list.begin();
+			circular_list<vec3>::iterator pre_iter;
+			circular_list<vec3>::iterator next_iter;
+			for(int i = 0; i < size; i++)
+			{
+				++iter;
+				if(max_z_iter->z() < iter->z())
+				{
+					max_z_iter = iter;
+				}
+			}
+			pre_iter = max_z_iter;
+			--pre_iter;
+			next_iter = max_z_iter;
+			++next_iter;
+			vec3 edge1 = *pre_iter - *max_z_iter, edge2 = *max_z_iter - *next_iter;
+			float convex_dir = edge1.x() * edge2.z() - edge1.z() * edge2.x();
+			while(size != 3)
+			{
+				iter = floor_mesh_list.begin();
+				vec3 p0, p1, p2;
+				for(int i = 0; i < floor_mesh_list.size(); i++, ++iter)
+				{
+					pre_iter = iter;
+					next_iter = iter;
+					p0 = *--pre_iter;
+					p1 = *iter;
+					p2 = *++next_iter;
+					circular_list<vec3>::iterator iter1 = next_iter;
+					vec3 v1 = p0 - p1, v0 = p2 - p0, v2 = p1 - p2;
+					if((v1.x() * v2.z() - v1.z() * v2.x()) * convex_dir < 0)
+					{
+						continue;
+					}
+					bool has_found = true;
+					for(int j = 0; j < floor_mesh_list.size() - 3; j++)
+					{
+						//check if p is inside the triangle
+						vec3 p(*++iter1);
+						vec3 v = p - p1;
+						float a = v.x() * v1.z() - v.z() * v1.x();
+						v = p - p0;
+						float b = v.x() * v0.z() - v.z() * v0.x();
+						v = p - p2;
+						float c = v.x() * v2.z() - v.z() * v2.x();
+						if(a * b > 0 && b * c > 0 && a * c > 0)
+						{
+							has_found = false;
+							break;
+						}
+					}
+					if(has_found)
+					{
+						break;
+					}
+				}
+				floor_mesh[index] = *iter;
+				floor_mesh[index + 1] = *pre_iter;
+				floor_mesh[index + 2] = *next_iter;
+				index += 3;
+				floor_mesh_list.remove(iter);
+				size--;
+			}
+			iter = floor_mesh_list.begin();
+			floor_mesh[index] = *iter;
+			floor_mesh[index + 1] = *++iter;
+			floor_mesh[index + 2] = *++iter;
+		}
+
+
+		//generate the final string with current rule
+		void generate_output_str()
+		{
+			std::string str;
+			output_str = axiom;
+			if(rules.size() == 0)
+				return;
+			for(int i = 0; i < iteration; i++)
+			{
+				str = "";
+				for(unsigned int k = 0; k < output_str.size(); k++)
+				{
+					unsigned m = 0;
+					for(; m < rules.size(); m++)
+					{
+						if(rules[m].get_letter() == output_str[k])
+						{
+							str += rules[m].get_rule();
+							break;
+						}
+
+					}
+					if(m == rules.size())
+					{
+						str += output_str[k];
+					}
+				}
+				output_str = str;
+			}
+		}
+
+		//generate one mesh for branchs and the other mesh for leaves according to the output string
+		void generate_mesh()
+		{
+			current_state.state::state(branch_length);
+			floor_mesh.reset();
+			floor_uvs.reset();
+			state_stack.reset();
+			mesh.reset();
+			uvs.reset();
+			mat4t m;
+			max_point = min_point = vec3(0, 0, 0);
+			for(unsigned int i = 0; i < output_str.size(); i++)
+			{
+				std::string float_str = "";
+				switch(output_str[i])
+				{
+				case 'K':
+					cutWindow();
+					break;
+				case '(':						
+					//should be in his format : (1.00)
+					float_str.push_back(output_str[i+1]);
+					float_str.push_back(output_str[i+2]);
+					float_str.push_back(output_str[i+3]);
+					float_str.push_back(output_str[i+4]);
+					winSize = (float)atof(float_str.c_str());
+					i+=5;
+					break;
+				case 'F':
+					extend();
+					current_state.m.loadIdentity();
+					break;
+				case '[':
+					push();
+					break;
+				case ']':
+					pop();
+					break;
+				case '+':
+					current_state.m = current_state.m * m_rotate_y_positive;
+					break;
+				case '-':
+					current_state.m = current_state.m * m_rotate_y_negative;
+					break;
+				}
+			}
+			enclose();
+
+			translate_building_to_origin();
+
+			floor_board_vertex_count = floor_mesh.size();
+			//remove those leading three vertices to be colinear
+			for(int i = 0; i < floor_board_vertex_count - 2; i++)
+			{
+				if(abs(dot(normalize(floor_mesh[i] - floor_mesh[i + 1]), normalize(floor_mesh[i + 2] - floor_mesh[i + 1]))) > .999f)
+				{
+					floor_mesh.erase(i + 1);
+					i = -1;
+					floor_board_vertex_count--;
+				}
+			}
+			if(floor_board_vertex_count < 3)
+				return;
+
+			extend_floor_polygon();
+
+			//translate the ground floor downward
+			for(int i = 0; i < floor_board_vertex_count; i++)
+			{
+				floor_mesh[i] = floor_mesh[i] + vec3(0.f, -floor_board_thickness * .5f, 0.f);
+			}
+
+			//reallocate memory for floor_mesh to hold whole vertices of floors
+			floor_side_index = (floor_count + 1) * 2 * (floor_board_vertex_count - 2) * 3; 
+			int array_size = floor_side_index + (floor_count + 1) * floor_board_vertex_count * 6;
+			floor_uvs.resize(array_size);
+			floor_mesh.resize(array_size);
+
+			create_side_surface_for_each_floor();
+
+			ear_clipping_triangulation();
+
+			create_horizontal_surface_for_each_floor();
+		}
+
+		void create_side_surface_for_each_floor()
+		{
+			int floor_board_count = floor_count + 1;
+			vec3 v(0.f, floor_board_thickness, 0.f);
+			int index = floor_side_index;
+			int index1;
+			int j = 0;
+			for(; j < floor_board_vertex_count - 1; j++)
+			{
+				index1 = index + j * 6;
+				floor_mesh[index1] = floor_mesh[j];
+				floor_mesh[index1 + 1] = floor_mesh[j] + v;
+				floor_mesh[index1 + 2] = floor_mesh[j + 1] + v;
+				floor_mesh[index1 + 3] = floor_mesh[j + 1] + v;
+				floor_mesh[index1 + 4] = floor_mesh[j + 1];
+				floor_mesh[index1 + 5] = floor_mesh[j];
+
+				floor_uvs[index1] = floor_uvs[j];
+				floor_uvs[index1 + 1] = floor_uvs[j];
+				floor_uvs[index1 + 2] = floor_uvs[j + 1];
+				floor_uvs[index1 + 3] = floor_uvs[j + 1];
+				floor_uvs[index1 + 4] = floor_uvs[j + 1];
+				floor_uvs[index1 + 5] = floor_uvs[j];
+			}
+			index1 = index + j * 6;
+			floor_mesh[index1] = floor_mesh[j];
+			floor_mesh[index1 + 1] = floor_mesh[j] + v;
+			floor_mesh[index1 + 2] = floor_mesh[0] + v;
+			floor_mesh[index1 + 3] = floor_mesh[0] + v;
+			floor_mesh[index1 + 4] = floor_mesh[0];
+			floor_mesh[index1 + 5] = floor_mesh[j];
+
+			floor_uvs[index1] = floor_uvs[j];
+			floor_uvs[index1 + 1] = floor_uvs[j];
+			floor_uvs[index1 + 2] = floor_uvs[0];
+			floor_uvs[index1 + 3] = floor_uvs[0];
+			floor_uvs[index1 + 4] = floor_uvs[0];
+			floor_uvs[index1 + 5] = floor_uvs[j];
+			int vertex_count = 6 * floor_board_vertex_count;
+			index += vertex_count;
+			for(int i = 1; i < floor_board_count; i++)
+			{
+				for(int j = 0; j < vertex_count; j++)
+				{
+					floor_mesh[index + j] = floor_mesh[floor_side_index + j] + vec3(0.f, wall_height * i, 0.f);
+					floor_uvs[index + j] = floor_uvs[floor_side_index + j];
+				}
+				index += vertex_count;
+			}
+		}
+
+		void extend_floor_polygon()
+		{
+			vec3 start = floor_mesh[1] - floor_mesh[0];
+			vec3 end = floor_mesh[0] - floor_mesh[floor_mesh.size() - 1];
+			float dir = cross(start, end).y();
+			vec3 v = floor_mesh[0];
+			floor_mesh.resize(floor_mesh.size() + 2);
+			floor_mesh[floor_mesh.size() - 2] = floor_mesh[0];
+			floor_mesh[floor_mesh.size() - 1] = floor_mesh[1];
+			for(unsigned int i = 0; i < floor_mesh.size() - 2; i++)
+			{
+				int index1 = i + 1;
+				vec3 v1 = floor_mesh[index1] - v;
+				v = floor_mesh[index1];
+				vec3 v2 = floor_mesh[i + 2] - floor_mesh[index1];
+				v1 = v1.normalize();
+				v2 = v2.normalize();
+				//get new point position after extension
+				vec3 upright(v1.z(), 0.f, -v1.x());
+				vec3 v3 = (v1 - v2).normalize();
+				if(cross(v2, v1).y() * dir < 0)
+				{
+					v3 = -v3;
+				}
+				float bisector_length = abs(extension_length / dot(upright, v3));
+				floor_mesh[index1] += v3 * bisector_length;
+			}
+			floor_mesh[0] = floor_mesh[floor_mesh.size() - 2];
+			floor_mesh.pop_back();
+			floor_mesh.pop_back();
+		}
+
+		void create_horizontal_surface_for_each_floor()
+		{
+			int floor_board_count = floor_count + 1;
+			int vertex_count = 3 * (floor_board_vertex_count - 2);
+			for(int i = 0; i < vertex_count; i++)
+			{
+				floor_uvs[i + vertex_count] = floor_uvs[i] = vec2(floor_mesh[i].x(), floor_mesh[i].z());
+				floor_mesh[vertex_count + i] = floor_mesh[i] + vec3(0.f, floor_board_thickness, 0.f);
+			}
+			for(int i = 1; i < floor_board_count; i++)
+			{
+				int index = vertex_count * i * 2;
+				float y = wall_height * i;
+				for(int j = 0; j < vertex_count; j++)
+				{
+					floor_mesh[index + j] = floor_mesh[j] + vec3(0.f, y, 0.f);
+					floor_mesh[index + vertex_count + j] = floor_mesh[j] + vec3(0.f, y + floor_board_thickness, 0.f);
+					floor_uvs[index + j] = vec2(floor_mesh[j].x(), floor_mesh[j].z());
+					floor_uvs[index + vertex_count + j] = vec2(floor_mesh[j].x(), floor_mesh[j].z());
+				}
+			}
+		}
+
+		// translate the building, and make attach the approximate centre of the ground floor to the origin
+		void translate_building_to_origin()
+		{
+			//get the centre point of the bounding rectangle
+			vec3 centre_point(.5f * (max_point - min_point) + min_point);
+			for(unsigned int i = 0; i < floor_mesh.size(); i++)
+			{
+				floor_mesh[i] = floor_mesh[i] - centre_point;
+			}
+			for(unsigned int i = 0; i < mesh.size(); i++)
+			{
+				mesh[i] = mesh[i] - centre_point;
+			}
+			for(unsigned int i = 0; i < frame_mesh.size(); i++)
+			{
+				frame_mesh[i] = frame_mesh[i] - centre_point;
+			}
+		}
 
 	public:
 		lsystem() : initial_pos(0, 0, 0),
@@ -111,6 +437,7 @@ namespace octet
 		wall_height(2),
 		floor_board_thickness(.2f),
 		floor_board_vertex_count(0),
+		centre_of_ground_floor(0),
 		floor_side_index(0)
 		{
 			srand((DWORD)time(NULL));
@@ -126,6 +453,24 @@ namespace octet
 			frameSize = 0.05f;
 			vector = vec3(1, 0, 0);
 			extension_length = .3f;
+		}
+
+		//get building height
+		float get_building_height()
+		{
+			return building_height;
+		}
+
+		// get wall height
+		float get_wall_height()
+		{
+			return wall_height;
+		}
+
+		//get floor count
+		int get_floor_count()
+		{
+			return floor_count;
 		}
 
 		//get the current iteration count
@@ -270,89 +615,9 @@ namespace octet
 					}
 				}
 			}
+			building_height = wall_height * floor_count;
 			generate_output_str();
 			generate_mesh();
-		}
-
-		void ear_clipping_triangulation()
-		{
-			circular_list<vec3> floor_mesh_list;
-			
-			int size = floor_board_vertex_count;
-			for(int i = 0; i < size; i++)
-			{
-				floor_mesh_list.push_back(floor_mesh[i]);
-			}
-			int index = 0;
-			int max_z_index = 0;
-			circular_list<vec3>::iterator iter = floor_mesh_list.begin();
-			circular_list<vec3>::iterator max_z_iter = floor_mesh_list.begin();
-			circular_list<vec3>::iterator pre_iter;
-			circular_list<vec3>::iterator next_iter;
-			for(int i = 0; i < size; i++)
-			{
-				++iter;
-				if(max_z_iter->z() < iter->z())
-				{
-					max_z_iter = iter;
-				}
-			}
-			pre_iter = max_z_iter;
-			--pre_iter;
-			next_iter = max_z_iter;
-			++next_iter;
-			vec3 edge1 = *pre_iter - *max_z_iter, edge2 = *max_z_iter - *next_iter;
-			float convex_dir = edge1.x() * edge2.z() - edge1.z() * edge2.x();
-			while(size != 3)
-			{
-				iter = floor_mesh_list.begin();
-				vec3 p0, p1, p2;
-				for(int i = 0; i < floor_mesh_list.size(); i++, ++iter)
-				{
-					pre_iter = iter;
-					next_iter = iter;
-					p0 = *--pre_iter;
-					p1 = *iter;
-					p2 = *++next_iter;
-					circular_list<vec3>::iterator iter1 = next_iter;
-					vec3 v1 = p0 - p1, v0 = p2 - p0, v2 = p1 - p2;
-					if((v1.x() * v2.z() - v1.z() * v2.x()) * convex_dir < 0)
-					{
-						continue;
-					}
-					bool has_found = true;
-					for(int j = 0; j < floor_mesh_list.size() - 3; j++)
-					{
-						//check if p is inside the triangle
-						vec3 p(*++iter1);
-						vec3 v = p - p1;
-						float a = v.x() * v1.z() - v.z() * v1.x();
-						v = p - p0;
-						float b = v.x() * v0.z() - v.z() * v0.x();
-						v = p - p2;
-						float c = v.x() * v2.z() - v.z() * v2.x();
-						if(a * b > 0 && b * c > 0 && a * c > 0)
-						{
-							has_found = false;
-							break;
-						}
-					}
-					if(has_found)
-					{
-						break;
-					}
-				}
-				floor_mesh[index] = *iter;
-				floor_mesh[index + 1] = *pre_iter;
-				floor_mesh[index + 2] = *next_iter;
-				index += 3;
-				floor_mesh_list.remove(iter);
-				size--;
-			}
-			iter = floor_mesh_list.begin();
-			floor_mesh[index] = *iter;
-			floor_mesh[index + 1] = *++iter;
-			floor_mesh[index + 2] = *++iter;
 		}
 
 		//render both branch mesh
@@ -378,226 +643,6 @@ namespace octet
 			glVertexAttribPointer(attribute_uv, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void *)&frame_uvs[0]);
 			glDrawArrays(GL_QUADS, 0, frame_mesh.size());
 		}
-
-		//generate the final string with current rule
-		void generate_output_str()
-		{
-			std::string str;
-			output_str = axiom;
-			if(rules.size() == 0)
-				return;
-			for(int i = 0; i < iteration; i++)
-			{
-				str = "";
-				for(unsigned int k = 0; k < output_str.size(); k++)
-				{
-					unsigned m = 0;
-					for(; m < rules.size(); m++)
-					{
-						if(rules[m].get_letter() == output_str[k])
-						{
-							str += rules[m].get_rule();
-							break;
-						}
-
-					}
-					if(m == rules.size())
-					{
-						str += output_str[k];
-					}
-				}
-				output_str = str;
-			}
-		}
-
-		//generate one mesh for branchs and the other mesh for leaves according to the output string
-		void generate_mesh()
-		{
-			current_state.state::state(branch_length);
-			floor_mesh.reset();
-			floor_uvs.reset();
-			state_stack.reset();
-			mesh.reset();
-			uvs.reset();
-			mat4t m;
-			for(unsigned int i = 0; i < output_str.size(); i++)
-			{
-				std::string float_str = "";
-				switch(output_str[i])
-				{
-				case 'K':
-					cutWindow();
-					break;
-				case '(':						
-					//should be in his format : (1.00)
-					float_str.push_back(output_str[i+1]);
-					float_str.push_back(output_str[i+2]);
-					float_str.push_back(output_str[i+3]);
-					float_str.push_back(output_str[i+4]);
-					winSize = atof(float_str.c_str());
-					i+=5;
-					break;
-				case 'F':
-					extend();
-					current_state.m.loadIdentity();
-					break;
-				case '[':
-					push();
-					break;
-				case ']':
-					pop();
-					break;
-				case '+':
-					current_state.m = current_state.m * m_rotate_y_positive;
-					break;
-				case '-':
-					current_state.m = current_state.m * m_rotate_y_negative;
-					break;
-				}
-			}
-			enclose();
-
-			floor_board_vertex_count = floor_mesh.size();
-			//remove those leading three vertices to be colinear
-			for(int i = 0; i < floor_board_vertex_count - 2; i++)
-			{
-				if(abs(dot(normalize(floor_mesh[i] - floor_mesh[i + 1]), normalize(floor_mesh[i + 2] - floor_mesh[i + 1]))) > .999f)
-				{
-					floor_mesh.erase(i + 1);
-					i = -1;
-					floor_board_vertex_count--;
-				}
-			}
-			if(floor_board_vertex_count < 3)
-				return;
-
-			extend_floor_polygon();
-
-			//translate the ground floor downward
-			for(int i = 0; i < floor_board_vertex_count; i++)
-			{
-				floor_mesh[i] = floor_mesh[i] + vec3(0.f, -floor_board_thickness * .5f, 0.f);
-			}
-
-			//reallocate memory for floor_mesh to hold whole vertices of floors
-			floor_side_index = (floor_count + 1) * 2 * (floor_board_vertex_count - 2) * 3; 
-			int array_size = floor_side_index + (floor_count + 1) * floor_board_vertex_count * 6;
-			floor_uvs.resize(array_size);
-			floor_mesh.resize(array_size);
-
-			create_side_surface_for_each_floor();
-
-			ear_clipping_triangulation();
-
-			create_horizontal_surface_for_each_floor();
-		}
-
-		void create_side_surface_for_each_floor()
-		{
-			int floor_board_count = floor_count + 1;
-			vec3 v(0.f, floor_board_thickness, 0.f);
-			int index = floor_side_index;
-			int index1;
-			int j = 0;
-			for(; j < floor_board_vertex_count - 1; j++)
-			{
-				index1 = index + j * 6;
-				floor_mesh[index1] = floor_mesh[j];
-				floor_mesh[index1 + 1] = floor_mesh[j] + v;
-				floor_mesh[index1 + 2] = floor_mesh[j + 1] + v;
-				floor_mesh[index1 + 3] = floor_mesh[j + 1] + v;
-				floor_mesh[index1 + 4] = floor_mesh[j + 1];
-				floor_mesh[index1 + 5] = floor_mesh[j];
-
-				floor_uvs[index1] = floor_uvs[j];
-				floor_uvs[index1 + 1] = floor_uvs[j];
-				floor_uvs[index1 + 2] = floor_uvs[j + 1];
-				floor_uvs[index1 + 3] = floor_uvs[j + 1];
-				floor_uvs[index1 + 4] = floor_uvs[j + 1];
-				floor_uvs[index1 + 5] = floor_uvs[j];
-			}
-			index1 = index + j * 6;
-			floor_mesh[index1] = floor_mesh[j];
-			floor_mesh[index1 + 1] = floor_mesh[j] + v;
-			floor_mesh[index1 + 2] = floor_mesh[0] + v;
-			floor_mesh[index1 + 3] = floor_mesh[0] + v;
-			floor_mesh[index1 + 4] = floor_mesh[0];
-			floor_mesh[index1 + 5] = floor_mesh[j];
-
-			floor_uvs[index1] = floor_uvs[j];
-			floor_uvs[index1 + 1] = floor_uvs[j];
-			floor_uvs[index1 + 2] = floor_uvs[0];
-			floor_uvs[index1 + 3] = floor_uvs[0];
-			floor_uvs[index1 + 4] = floor_uvs[0];
-			floor_uvs[index1 + 5] = floor_uvs[j];
-			int vertex_count = 6 * floor_board_vertex_count;
-			index += vertex_count;
-			for(int i = 1; i < floor_board_count; i++)
-			{
-				for(int j = 0; j < vertex_count; j++)
-				{
-					floor_mesh[index + j] = floor_mesh[floor_side_index + j] + vec3(0.f, wall_height * i, 0.f);
-					floor_uvs[index + j] = floor_uvs[floor_side_index + j];
-				}
-				index += vertex_count;
-			}
-		}
-
-		void extend_floor_polygon()
-		{
-			vec3 start = floor_mesh[1] - floor_mesh[0];
-			vec3 end = floor_mesh[0] - floor_mesh[floor_mesh.size() - 1];
-			float dir = cross(start, end).y();
-			vec3 v = floor_mesh[0];
-			floor_mesh.resize(floor_mesh.size() + 2);
-			floor_mesh[floor_mesh.size() - 2] = floor_mesh[0];
-			floor_mesh[floor_mesh.size() - 1] = floor_mesh[1];
-			for(unsigned int i = 0; i < floor_mesh.size() - 2; i++)
-			{
-				int index1 = i + 1;
-				vec3 v1 = floor_mesh[index1] - v;
-				v = floor_mesh[index1];
-				vec3 v2 = floor_mesh[i + 2] - floor_mesh[index1];
-				v1 = v1.normalize();
-				v2 = v2.normalize();
-				//get new point position after extension
-				vec3 upright(v1.z(), 0.f, -v1.x());
-				vec3 v3 = (v1 - v2).normalize();
-				if(cross(v2, v1).y() * dir < 0)
-				{
-					v3 = -v3;
-				}
-				float bisector_length = abs(extension_length / dot(upright, v3));
-				floor_mesh[index1] += v3 * bisector_length;
-			}
-			floor_mesh[0] = floor_mesh[floor_mesh.size() - 2];
-			floor_mesh.pop_back();
-			floor_mesh.pop_back();
-		}
-
-		void create_horizontal_surface_for_each_floor()
-		{
-			int floor_board_count = floor_count + 1;
-			int vertex_count = 3 * (floor_board_vertex_count - 2);
-			for(int i = 0; i < vertex_count; i++)
-			{
-				floor_uvs[i + vertex_count] = floor_uvs[i] = vec2(floor_mesh[i].x(), floor_mesh[i].z());
-				floor_mesh[vertex_count + i] = floor_mesh[i] + vec3(0.f, floor_board_thickness, 0.f);
-			}
-			for(int i = 1; i < floor_board_count; i++)
-			{
-				int index = vertex_count * i * 2;
-				float y = wall_height * i;
-				for(int j = 0; j < vertex_count; j++)
-				{
-					floor_mesh[index + j] = floor_mesh[j] + vec3(0.f, y, 0.f);
-					floor_mesh[index + vertex_count + j] = floor_mesh[j] + vec3(0.f, y + floor_board_thickness, 0.f);
-					floor_uvs[index + j] = vec2(floor_mesh[j].x(), floor_mesh[j].z());
-					floor_uvs[index + vertex_count + j] = vec2(floor_mesh[j].x(), floor_mesh[j].z());
-				}
-			}
-		}
-
 		//decrease iteration count
 		void decrease_iteration()
 		{
@@ -734,6 +779,8 @@ namespace octet
 				p2 += vector_v;
 				p3 += vector_v;
 			}
+			min_point = min_point.min(current_state.pos);
+			max_point = max_point.max(current_state.pos);
 			floor_mesh.push_back(current_state.pos);
 			floor_uvs.push_back(vec2(current_state.pos.x(), current_state.pos.z()));
 			current_state.u = target_u;

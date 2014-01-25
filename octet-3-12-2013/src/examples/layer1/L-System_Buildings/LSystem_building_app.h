@@ -13,13 +13,30 @@ class LSystem_building_app : public app {
 	// texture shader
 	texture_shader texture_shader_;
 
+	float rotate_h;
+	float rotate_v;
+
+	int mouse_x;
+	int mouse_y;
+	int mouse_wheel;
+
 	lsystem l;
+
+	camera_control cc;
+
+	bool is_left_button_down;
 
 	public:
 
 	// this is called when we construct the class
 	LSystem_building_app(int argc, char **argv) : app(argc, argv),
-	key_cool_down(0)
+	key_cool_down(0),
+	rotate_h(0),
+	rotate_v(0),
+	mouse_x(0),
+	mouse_y(0),
+	mouse_wheel(0),
+	is_left_button_down(false)
 	{
 	}
 
@@ -33,15 +50,17 @@ class LSystem_building_app : public app {
 		// put the triangle at the center of the world
 		modelToWorld.loadIdentity();
 
+		// set camera control info
+		cc.set_view_distance(20);
+		cc.set_view_position(vec3(0.f, l.get_building_height() * .5f, 0.f));
+
 		// put the camera a short distance from the center, looking towards the triangle
-		cameraToWorld.loadIdentity();
-		cameraToWorld.rotateX(-20);
-		cameraToWorld.translate(0, 2.5, 20);
 		///*
 		glEnable(GL_CULL_FACE);
 		glCullFace(GL_BACK);
 		glFrontFace(GL_CW);
 		glDisable(GL_CULL_FACE);
+		mouse_wheel = get_mouse_wheel();
 		//*/
 	}
 
@@ -61,7 +80,7 @@ class LSystem_building_app : public app {
 		// build a projection matrix: model -> world -> camera -> projection
 		// the projection space is the cube -1 <= x/w, y/w, z/w <= 1
 		mat4t modelToProjection = mat4t::build_projection_matrix(modelToWorld, cameraToWorld);
-		modelToWorld.rotateY(.5f);
+		cameraToWorld = cc.get_matrix();
 
 		vec4 color(0, 1, 0, 1);
 		texture_shader_.render(modelToProjection, 0);
@@ -73,6 +92,65 @@ class LSystem_building_app : public app {
 		// each corner has 3 floats (x, y, z)
 		// there is no gap between the 3 floats and hence the stride is 3*sizeof(float)
 		l.render();
+		if(is_key_down(key_lmb) && !is_left_button_down)
+		{
+			is_left_button_down = true;
+			get_mouse_pos(mouse_x, mouse_y);
+			SetCapture(get_hwnd());
+		}
+		else if(is_left_button_down && !is_key_down(key_lmb))
+		{
+			is_left_button_down = false;
+			ReleaseCapture();
+		}
+		int mouse_wheel_delta = get_mouse_wheel() - mouse_wheel;
+		if(mouse_wheel_delta != 0)
+		{
+			static float factor = 1.f;
+			cc.add_view_distance(mouse_wheel_delta / WHEEL_DELTA * factor);
+			mouse_wheel = get_mouse_wheel();
+		}
+		if(is_left_button_down)
+		{
+			static float factor = .2f;
+			is_left_button_down = true;
+			int x, y;
+			get_mouse_pos(x, y);
+			short sx = x, sy = y;
+			int delta_x = mouse_x - sx, delta_y = mouse_y - sy;
+			if(delta_x != 0)
+				cc.rotate_h((float)delta_x * factor);
+			if(delta_y != 0)
+				cc.rotate_v((float)delta_y * factor);
+			mouse_x = sx;
+			mouse_y = sy;
+		}
+		static float key_rotation_delta = 1.f;
+		if(is_key_down('W'))
+		{
+			cc.rotate_v(key_rotation_delta);
+		}
+		if(is_key_down('S'))
+		{
+			cc.rotate_v(-key_rotation_delta);
+		}
+		if(is_key_down('A'))
+		{
+			cc.rotate_h(key_rotation_delta);
+		}
+		if(is_key_down('D'))
+		{
+			cc.rotate_h(-key_rotation_delta);
+		}
+		static float key_translation_delta = .2f;
+		if(is_key_down('Q'))
+		{
+			cc.add_view_distance(-key_translation_delta);
+		}
+		if(is_key_down('E'))
+		{
+			cc.add_view_distance(key_translation_delta);
+		}
 		if(current_time - key_cool_down > 100)
 		{
 			char buf[256];

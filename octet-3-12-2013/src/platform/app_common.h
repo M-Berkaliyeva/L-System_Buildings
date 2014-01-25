@@ -86,6 +86,7 @@ namespace octet {
       // this memset writes 0 to every byte of keys[]
       memset(keys, 0, sizeof(keys));
       mouse_x = mouse_y = 0;
+	  mouse_wheel = 0;
       is_gles3 = false;
       frame_number = 0;
     }

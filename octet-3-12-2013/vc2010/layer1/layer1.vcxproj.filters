@@ -202,6 +202,12 @@
     <ClInclude Include="..\..\src\examples\layer1\L-System_Buildings\LSystem_building.h">
       <Filter>l-system_building</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\examples\layer1\L-System_Buildings\camera_control.h">
+      <Filter>l-system_building</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\examples\layer1\L-System_Buildings\circular_list.h">
+      <Filter>l-system_building</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\src\resources\mesh_builder.inl">

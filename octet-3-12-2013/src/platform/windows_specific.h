@@ -131,6 +131,11 @@ namespace octet {
     app(int argc, char **argv) {
     }
 
+	HWND get_hwnd()
+	{
+		return window_handle;
+	}
+
     void init() {
       WSADATA wsa;
       WSAStartup(MAKEWORD(2,2), &wsa);
@@ -269,7 +274,7 @@ namespace octet {
             } else if (msg.message == WM_MOUSEMOVE) {
               app->set_mouse_pos(msg.lParam & 0xffff, msg.lParam >> 16);
             } else if (msg.message == WM_MOUSEWHEEL) {
-              app->set_mouse_wheel(app->get_mouse_wheel() + (int)msg.wParam);
+              app->set_mouse_wheel(app->get_mouse_wheel() + GET_WHEEL_DELTA_WPARAM(msg.wParam));
             } else if (msg.message == WM_LBUTTONDOWN || msg.message == WM_LBUTTONUP) {
               app->set_key(key_lmb, msg.message == WM_LBUTTONDOWN);
             } else if (msg.message == WM_MBUTTONDOWN || msg.message == WM_MBUTTONUP) {
@@ -292,7 +297,7 @@ namespace octet {
 			exit(0);
 
         // waste some time. (do not do this in real games!)
-        Sleep(1000/60);
+        Sleep(1000/120);
 
         for (int i = 0; i != m.size(); ++i) {
           // note: because Win8 generates an invisible window, we need to check m.value(i)
