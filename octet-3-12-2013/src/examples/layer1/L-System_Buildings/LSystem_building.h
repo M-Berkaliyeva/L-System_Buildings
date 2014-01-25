@@ -71,6 +71,7 @@ namespace octet
 		dynarray<vec3> floor_mesh;
 		dynarray<vec2> floor_uvs;
 		dynarray<vec3> current_walls;
+		dynarray<vec2> current_walls_uvs;
 		std::string letters;
 		dynarray<stochastic_rule> rules;
 		state current_state;
@@ -685,6 +686,11 @@ namespace octet
 			{
 				current_walls.erase(k);
 			}
+			int s2 = current_walls_uvs.size();
+			for(int j = 0; j < s2; j++)
+			{
+				current_walls_uvs.erase(j);
+			}
 
 			vec3 vector_h, vector_v(0.f, wall_height, 0.f);
 			vec3 p0 = current_state.pos;
@@ -695,6 +701,10 @@ namespace octet
 			vec3 p3 = p0 + vector_h;
 			float target_u = current_state.u + current_state.length;
 			vec2 uv(current_state.u, 0), uv1(current_state.u, wall_height), uv2(target_u, wall_height), uv3(target_u, 0);
+			current_walls_uvs.push_back(uv);
+			current_walls_uvs.push_back(uv1);
+			current_walls_uvs.push_back(uv2);
+			current_walls_uvs.push_back(uv3);
 			for(int i = 0; i < floor_count; i++)
 			{
 				mesh.push_back(p0);
@@ -729,6 +739,19 @@ namespace octet
 			int uvSize = uvs.size();	
 			float halfWidth = winSize/2;
 
+			//find relative uv coordinates 
+			vec2 uv_p0 = current_walls_uvs[0];
+			vec2 uv_p1 = current_walls_uvs[1];
+			vec2 uv_p2 = current_walls_uvs[2];
+			vec2 uv_p3 = current_walls_uvs[3];
+
+			float u_wp0 = uv_p3.x() - (branch_length - winSize)/2 - winSize;
+			float v_wp0 = (wall_height - winSize)/2;
+			vec2 uv_wp0(u_wp0, v_wp0);
+			vec2 uv_wp1(u_wp0, v_wp0 + winSize);
+			vec2 uv_wp2(u_wp0 + winSize, v_wp0 + winSize);
+			vec2 uv_wp3(u_wp0 + winSize, v_wp0);
+
 			//eraze prev wall meshes of windows
 			for(int i = 1; i < curr_size +1; i++)
 			{
@@ -738,10 +761,10 @@ namespace octet
 			for(int j = 0; j < curr_size; j = j+4)
 			{			
 				//store last 4 points from floor_mesh as current wall 
-				vec3 p0 = current_walls[j];//mesh[size-4];
-				vec3 p1 = current_walls[j+1];//mesh[size-3];
-				vec3 p2 = current_walls[j+2];//mesh[size-2];
-				vec3 p3 = current_walls[j+3];//mesh[size-1];
+				vec3 p0 = current_walls[j];
+				vec3 p1 = current_walls[j+1];
+				vec3 p2 = current_walls[j+2];
+				vec3 p3 = current_walls[j+3];
 
 				//find midpoint on the left edge of the wall
 				float t = 0.5f;			
@@ -763,58 +786,19 @@ namespace octet
 				vec3 wp1 = wp0 + vector_v;//top left
 				vec3 wp2 = wp1 + vector_h;//top right
 				vec3 wp3 = wp0 + vector_h;//bottom right
-
-				//find relative uv coordinates
-				vec2 uv_p0(0, 0);
-				vec2 uv_p1(0, 1);
-				vec2 uv_p2(1, 1);
-				vec2 uv_p3(1, 0);
-
-				float denom_u = (p3.x() - p0.x());
-				float denom_v = (p1.y() - p0.y());
-
-				float u_wp0 = (wp0.x() - p0.x())/denom_u;
-				float v_wp0 = (wp0.y() - p0.y())/denom_v;
-				float u_wp1 = (wp1.x() - p0.x())/denom_u;
-				float v_wp1 = (wp1.y() - p0.y())/denom_v;
-				float u_wp2 = (wp2.x() - p0.x())/denom_u;
-				float v_wp2 = (wp2.y() - p0.y())/denom_v;
-				float u_wp3 = (wp3.x() - p0.x())/denom_u;
-				float v_wp3 = (wp3.y() - p0.y())/denom_v;
-
-
-				float uv_winSize = winSize /(p3.x() - p0.x());
-
-				vec2 uv_wp0(u_wp0, v_wp0);
-				vec2 uv_wp1(u_wp1, v_wp1);//u_wp0, v_wp0 + winSize);
-				vec2 uv_wp2(u_wp2, v_wp2);//u_wp0 + winSize, v_wp0 + winSize);
-				vec2 uv_wp3(u_wp3, v_wp3);//u_wp0 + winSize, v_wp0);
-
-				////remove 4 old mesh points from the dynarray
-				//mesh.erase(size-1);
-				//mesh.erase(size-2);
-				//mesh.erase(size-3);
-				//mesh.erase(size-4);
-
-				////remove 4 od uv coords
-				//uvs.erase(uvSize-1);
-				//uvs.erase(uvSize-2);
-				//uvs.erase(uvSize-3);
-				//uvs.erase(uvSize-4);
 			
 				//add 4 new quads to the dynarray
-				//instead of erazing -> rewrite last four elements of mesh and uvs
 
 				//mesh 1: p0, p1, wp1, wp0
-				mesh.push_back(p0);//mesh[size-4] = p0;//mesh.push_back(p0);
-				mesh.push_back(p1);//mesh[size-3] = p1;//mesh.push_back(p1);
-				mesh.push_back(wp1);//mesh[size-2] = wp1;//mesh.push_back(wp1);
-				mesh.push_back(wp0);//mesh[size-1] = wp0;//mesh.push_back(wp0);
+				mesh.push_back(p0);
+				mesh.push_back(p1);
+				mesh.push_back(wp1);
+				mesh.push_back(wp0);
 				//mesh 1: uvs	
-				uvs.push_back(uv_p0);//uvs[uvSize-4] = uv_p0;//uvs.push_back(uv_p0);
-				uvs.push_back(uv_p1);//uvs[uvSize-3] = uv_p1;//uvs.push_back(uv_p1);
-				uvs.push_back(uv_wp1);//uvs[uvSize-2] = uv_wp1;//uvs.push_back(uv_wp1);
-				uvs.push_back(uv_wp0);//uvs[uvSize-1] = uv_wp0;//uvs.push_back(uv_wp0);
+				uvs.push_back(uv_p0);
+				uvs.push_back(uv_p1);
+				uvs.push_back(uv_wp1);
+				uvs.push_back(uv_wp0);
 
 				//mesh 2: wp1, p1, p2, wp2
 				mesh.push_back(wp1);

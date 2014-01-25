@@ -5,7 +5,7 @@ extension length
 wall height
 2
 floor count
-2
+5
 angle
 25
 branch length
