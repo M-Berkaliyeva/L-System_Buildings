@@ -701,6 +701,10 @@ namespace octet
 				mesh.push_back(p1);
 				mesh.push_back(p2);
 				mesh.push_back(p3);
+				current_walls.push_back(p0);
+				current_walls.push_back(p1);
+				current_walls.push_back(p2);
+				current_walls.push_back(p3);
 				uvs.push_back(uv);
 				uvs.push_back(uv1);
 				uvs.push_back(uv2);
