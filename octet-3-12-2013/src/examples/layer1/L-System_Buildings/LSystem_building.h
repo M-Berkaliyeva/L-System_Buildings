@@ -70,6 +70,7 @@ namespace octet
 		dynarray<vec2> frame_uvs;
 		dynarray<vec3> floor_mesh;
 		dynarray<vec2> floor_uvs;
+		dynarray<vec3> current_walls;
 		std::string letters;
 		dynarray<stochastic_rule> rules;
 		state current_state;
@@ -658,6 +659,10 @@ namespace octet
 				mesh.push_back(p1);
 				mesh.push_back(p2);
 				mesh.push_back(p3);
+				current_walls.push_back(p0);
+				current_walls.push_back(p1);
+				current_walls.push_back(p2);
+				current_walls.push_back(p3);
 				uvs.push_back(uv);
 				uvs.push_back(uv1);
 				uvs.push_back(uv2);
@@ -674,6 +679,13 @@ namespace octet
 		// branch producing operation denoted by 'F'
 		void extend()
 		{
+			//refresh a current walls and current uvs stack
+			int s = current_walls.size();
+			for(int k = 0; k < s; k++)
+			{
+				current_walls.erase(k);
+			}
+
 			vec3 vector_h, vector_v(0.f, wall_height, 0.f);
 			vec3 p0 = current_state.pos;
 			vec3 p1 = current_state.pos + vector_v;			
@@ -707,123 +719,134 @@ namespace octet
 		}
 
 		void cutWindow()
-		{
+		{				
 			int size = mesh.size();
-			int uvSize = uvs.size();
+			int curr_size = current_walls.size();
+			int uvSize = uvs.size();	
 			float halfWidth = winSize/2;
-			//store last 4 points from floor_mesh as current wall 
-			vec3 p0 = mesh[size-4];
-			vec3 p1 = mesh[size-3];
-			vec3 p2 = mesh[size-2];
-			vec3 p3 = mesh[size-1];
 
-			//find midpoint on the left edge of the wall
-			float t = 0.5f;			
-			vec3 left_midpoint = (1-t)*p0 + t*p1;
-			//find distance to the middle of the wall
-			float dist = branch_length/2;
+			//eraze prev wall meshes of windows
+			for(int i = 1; i < curr_size +1; i++)
+			{
+				mesh.erase(size-i);
+				uvs.erase(uvSize-i);
+			}			
+			for(int j = 0; j < curr_size; j = j+4)
+			{			
+				//store last 4 points from floor_mesh as current wall 
+				vec3 p0 = current_walls[j];//mesh[size-4];
+				vec3 p1 = current_walls[j+1];//mesh[size-3];
+				vec3 p2 = current_walls[j+2];//mesh[size-2];
+				vec3 p3 = current_walls[j+3];//mesh[size-1];
+
+				//find midpoint on the left edge of the wall
+				float t = 0.5f;			
+				vec3 left_midpoint = (1-t)*p0 + t*p1;
+				//find distance to the middle of the wall
+				float dist = branch_length/2;
 			
-			//find vector after rotation
-			vec3 vector_h = vector * halfWidth;
-			vec3 vector_v(.0f, halfWidth, .0f);
+				//find vector after rotation
+				vec3 vector_h = vector * halfWidth;
+				vec3 vector_v(.0f, halfWidth, .0f);
 			
-			//find  midpoint after rotation
-			vec3 midpoint = left_midpoint + dist * vector;
+				//find  midpoint after rotation
+				vec3 midpoint = left_midpoint + dist * vector;
 
-			//find four points of the window
-			vec3 wp0 = midpoint - vector_h - vector_v;//bottom left
-			vector_v = vector_v * 2;
-			vector_h = vector_h * 2;
-			vec3 wp1 = wp0 + vector_v;//top left
-			vec3 wp2 = wp1 + vector_h;//top right
-			vec3 wp3 = wp0 + vector_h;//bottom right
+				//find four points of the window
+				vec3 wp0 = midpoint - vector_h - vector_v;//bottom left
+				vector_v = vector_v * 2;
+				vector_h = vector_h * 2;
+				vec3 wp1 = wp0 + vector_v;//top left
+				vec3 wp2 = wp1 + vector_h;//top right
+				vec3 wp3 = wp0 + vector_h;//bottom right
 
-			//find relative uv coordinates
-			vec2 uv_p0(0, 0);
-			vec2 uv_p1(0, 1);
-			vec2 uv_p2(1, 1);
-			vec2 uv_p3(1, 0);
+				//find relative uv coordinates
+				vec2 uv_p0(0, 0);
+				vec2 uv_p1(0, 1);
+				vec2 uv_p2(1, 1);
+				vec2 uv_p3(1, 0);
 
-			float denom_u = (p3.x() - p0.x());
-			float denom_v = (p1.y() - p0.y());
+				float denom_u = (p3.x() - p0.x());
+				float denom_v = (p1.y() - p0.y());
 
-			float u_wp0 = (wp0.x() - p0.x())/denom_u;
-			float v_wp0 = (wp0.y() - p0.y())/denom_v;
-			float u_wp1 = (wp1.x() - p0.x())/denom_u;
-			float v_wp1 = (wp1.y() - p0.y())/denom_v;
-			float u_wp2 = (wp2.x() - p0.x())/denom_u;
-			float v_wp2 = (wp2.y() - p0.y())/denom_v;
-			float u_wp3 = (wp3.x() - p0.x())/denom_u;
-			float v_wp3 = (wp3.y() - p0.y())/denom_v;
+				float u_wp0 = (wp0.x() - p0.x())/denom_u;
+				float v_wp0 = (wp0.y() - p0.y())/denom_v;
+				float u_wp1 = (wp1.x() - p0.x())/denom_u;
+				float v_wp1 = (wp1.y() - p0.y())/denom_v;
+				float u_wp2 = (wp2.x() - p0.x())/denom_u;
+				float v_wp2 = (wp2.y() - p0.y())/denom_v;
+				float u_wp3 = (wp3.x() - p0.x())/denom_u;
+				float v_wp3 = (wp3.y() - p0.y())/denom_v;
 
 
-			float uv_winSize = winSize /(p3.x() - p0.x());
+				float uv_winSize = winSize /(p3.x() - p0.x());
 
-			vec2 uv_wp0(u_wp0, v_wp0);
-			vec2 uv_wp1(u_wp1, v_wp1);//u_wp0, v_wp0 + winSize);
-			vec2 uv_wp2(u_wp2, v_wp2);//u_wp0 + winSize, v_wp0 + winSize);
-			vec2 uv_wp3(u_wp3, v_wp3);//u_wp0 + winSize, v_wp0);
+				vec2 uv_wp0(u_wp0, v_wp0);
+				vec2 uv_wp1(u_wp1, v_wp1);//u_wp0, v_wp0 + winSize);
+				vec2 uv_wp2(u_wp2, v_wp2);//u_wp0 + winSize, v_wp0 + winSize);
+				vec2 uv_wp3(u_wp3, v_wp3);//u_wp0 + winSize, v_wp0);
 
-			////remove 4 old mesh points from the dynarray
-			//mesh.erase(size-1);
-			//mesh.erase(size-2);
-			//mesh.erase(size-3);
-			//mesh.erase(size-4);
+				////remove 4 old mesh points from the dynarray
+				//mesh.erase(size-1);
+				//mesh.erase(size-2);
+				//mesh.erase(size-3);
+				//mesh.erase(size-4);
 
-			////remove 4 od uv coords
-			//uvs.erase(uvSize-1);
-			//uvs.erase(uvSize-2);
-			//uvs.erase(uvSize-3);
-			//uvs.erase(uvSize-4);
+				////remove 4 od uv coords
+				//uvs.erase(uvSize-1);
+				//uvs.erase(uvSize-2);
+				//uvs.erase(uvSize-3);
+				//uvs.erase(uvSize-4);
 			
-			//add 4 new quads to the dynarray
-			//instead of erazing -> rewrite last four elements of mesh and uvs
+				//add 4 new quads to the dynarray
+				//instead of erazing -> rewrite last four elements of mesh and uvs
 
-			//mesh 1: p0, p1, wp1, wp0
-			mesh[size-4] = p0;//mesh.push_back(p0);
-			mesh[size-3] = p1;//mesh.push_back(p1);
-			mesh[size-2] = wp1;//mesh.push_back(wp1);
-			mesh[size-1] = wp0;//mesh.push_back(wp0);
-			//mesh 1: uvs	
-			uvs[uvSize-4] = uv_p0;//uvs.push_back(uv_p0);
-			uvs[uvSize-3] = uv_p1;//uvs.push_back(uv_p1);
-			uvs[uvSize-2] = uv_wp1;//uvs.push_back(uv_wp1);
-			uvs[uvSize-1] = uv_wp0;//uvs.push_back(uv_wp0);
+				//mesh 1: p0, p1, wp1, wp0
+				mesh.push_back(p0);//mesh[size-4] = p0;//mesh.push_back(p0);
+				mesh.push_back(p1);//mesh[size-3] = p1;//mesh.push_back(p1);
+				mesh.push_back(wp1);//mesh[size-2] = wp1;//mesh.push_back(wp1);
+				mesh.push_back(wp0);//mesh[size-1] = wp0;//mesh.push_back(wp0);
+				//mesh 1: uvs	
+				uvs.push_back(uv_p0);//uvs[uvSize-4] = uv_p0;//uvs.push_back(uv_p0);
+				uvs.push_back(uv_p1);//uvs[uvSize-3] = uv_p1;//uvs.push_back(uv_p1);
+				uvs.push_back(uv_wp1);//uvs[uvSize-2] = uv_wp1;//uvs.push_back(uv_wp1);
+				uvs.push_back(uv_wp0);//uvs[uvSize-1] = uv_wp0;//uvs.push_back(uv_wp0);
 
-			//mesh 2: wp1, p1, p2, wp2
-			mesh.push_back(wp1);
-			mesh.push_back(p1);
-			mesh.push_back(p2);
-			mesh.push_back(wp2);
-			//mesh 2: uvs
-			uvs.push_back(uv_wp1);
-			uvs.push_back(uv_p1);
-			uvs.push_back(uv_p2);
-			uvs.push_back(uv_wp2);
+				//mesh 2: wp1, p1, p2, wp2
+				mesh.push_back(wp1);
+				mesh.push_back(p1);
+				mesh.push_back(p2);
+				mesh.push_back(wp2);
+				//mesh 2: uvs
+				uvs.push_back(uv_wp1);
+				uvs.push_back(uv_p1);
+				uvs.push_back(uv_p2);
+				uvs.push_back(uv_wp2);
 
-			//mesh 3: wp3, wp2, p2, p3
-			mesh.push_back(wp3);
-			mesh.push_back(wp2);
-			mesh.push_back(p2);
-			mesh.push_back(p3);
-			//mesh 3: uvs
-			uvs.push_back(uv_wp3);
-			uvs.push_back(uv_wp2);
-			uvs.push_back(uv_p2);
-			uvs.push_back(uv_p3);
+				//mesh 3: wp3, wp2, p2, p3
+				mesh.push_back(wp3);
+				mesh.push_back(wp2);
+				mesh.push_back(p2);
+				mesh.push_back(p3);
+				//mesh 3: uvs
+				uvs.push_back(uv_wp3);
+				uvs.push_back(uv_wp2);
+				uvs.push_back(uv_p2);
+				uvs.push_back(uv_p3);
 
-			//mesh 4: p0, wp0, wp3, p3
-			mesh.push_back(p0);
-			mesh.push_back(wp0);
-			mesh.push_back(wp3);
-			mesh.push_back(p3);
-			//mesh 4: uvs
-			uvs.push_back(uv_p0);
-			uvs.push_back(uv_wp0);
-			uvs.push_back(uv_wp3);
-			uvs.push_back(uv_p3);
+				//mesh 4: p0, wp0, wp3, p3
+				mesh.push_back(p0);
+				mesh.push_back(wp0);
+				mesh.push_back(wp3);
+				mesh.push_back(p3);
+				//mesh 4: uvs
+				uvs.push_back(uv_p0);
+				uvs.push_back(uv_wp0);
+				uvs.push_back(uv_wp3);
+				uvs.push_back(uv_p3);
 
-			makeWindowFrame(wp0, wp1, wp2, wp3); 
+				makeWindowFrame(wp0, wp1, wp2, wp3); 
+			}	
 		}
 
 		void makeWindowFrame(vec3 &wp0, vec3 &wp1, vec3 &wp2, vec3 &wp3)
