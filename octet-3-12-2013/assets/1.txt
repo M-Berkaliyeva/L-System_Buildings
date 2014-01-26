@@ -1,11 +1,11 @@
 floor thickness
-.4
+.3
 extension length
 .3
 wall height
 2
 floor count
-5
+15
 angle
 25
 branch length
@@ -17,4 +17,4 @@ F
 letters
 F
 rules
-FB(0.80)K+FK-F-F+FBK+FK+F+F+F
+FB(0.80)K+FBK-F-F+FBK+FK+FBK+FK+FBK

@@ -466,7 +466,7 @@ namespace octet
 			winSize = 1.2f;
 			frameSize = 0.05f;
 			balcony = false;
-			balcony_extention = .4f;
+			balcony_extention = .35f;
 			balcony_height = .5;
 			vector = vec3(1, 0, 0);
 			extension_length = .3f;
@@ -1135,7 +1135,7 @@ namespace octet
 			vec3 balcony_ext_y(.0f, .3f, .0f);
 			vec3 balcony_floor_y(.0f, rack_size, .0f);
 			//balcony floor
-			vec3 bft_p1 = p0 + balcony_ext_x + balcony_ext_y; //balcony floor top mesh p1  - offset from window botom left by .2f horizontally and vertically
+			vec3 bft_p1 = p0 + balcony_ext_x + balcony_ext_y; 
 			vec3 bft_p0 = bft_p1 + balcony_z;
 			vec3 bft_p2 = p3 - balcony_ext_x + balcony_ext_y;
 			vec3 bft_p3 = bft_p2 + balcony_z;
@@ -1173,18 +1173,8 @@ namespace octet
 			balcony_mesh.push_back(bfb_p3);
 			balcony_mesh.push_back(bft_p3);
 			balcony_mesh.push_back(bft_p2);
-			balcony_mesh.push_back(bfb_p2);
-
-			//uvs
-			vec2 uv(0, 0), uv1(0, 1);
-			for(int i = 0; i < 5; i++)
-			{
-				balcony_uvs.push_back(uv);
-				balcony_uvs.push_back(uv1);
-				balcony_uvs.push_back(uv1 + vec2(1, 0));
-				balcony_uvs.push_back(uv + vec2(1, 0));
-			}
-
+			balcony_mesh.push_back(bfb_p2);			
+			
 			//top racks
 			vec3 balcony_v(.0f, balcony_height, .0f);
 			vec3 balcony_h = bft_p3 - bft_p0;
@@ -1230,15 +1220,7 @@ namespace octet
 			balcony_mesh.push_back(brbl_p2);
 			balcony_mesh.push_back(brbl_p1);
 			balcony_mesh.push_back(brbl_p0);
-
-			for(int i = 0; i < 4; i++)
-			{
-				balcony_uvs.push_back(uv);
-				balcony_uvs.push_back(uv1);
-				balcony_uvs.push_back(uv1 + vec2(1, 0));
-				balcony_uvs.push_back(uv + vec2(1, 0));
-			}
-
+						
 			//front rack
 			balcony_mesh.push_back(brtl_p0);
 			balcony_mesh.push_back(brtl_p3);
@@ -1259,15 +1241,7 @@ namespace octet
 			balcony_mesh.push_back(brbl_p3);
 			balcony_mesh.push_back(brbr_p0);
 			balcony_mesh.push_back(brtr_p0);
-
-			for(int i = 0; i < 4; i++)
-			{
-				balcony_uvs.push_back(uv);
-				balcony_uvs.push_back(uv1);
-				balcony_uvs.push_back(uv1 + vec2(1, 0));
-				balcony_uvs.push_back(uv + vec2(1, 0));
-			}
-
+			
 			//right rack
 			balcony_mesh.push_back(brtr_p0);
 			balcony_mesh.push_back(brtr_p1);
@@ -1289,14 +1263,105 @@ namespace octet
 			balcony_mesh.push_back(brbr_p1);
 			balcony_mesh.push_back(brbr_p0);
 
-			for(int i = 0; i < 4; i++)
+
+			//uvs
+			vec2 uv(0, 0), uv1(0, 1);
+			for(int i = 0; i < 17; i++)
 			{
 				balcony_uvs.push_back(uv);
 				balcony_uvs.push_back(uv1);
 				balcony_uvs.push_back(uv1 + vec2(1, 0));
 				balcony_uvs.push_back(uv + vec2(1, 0));
 			}
-			//horisontal racks
+
+			//vertical racks
+			float dist_v = balcony_extention - rack_size;
+			float dist_h = (bft_p2 - bft_p1).length() - rack_size;
+			//find 4 center points of the top racks 
+			vec3 m_b_p1 = bft_p1 + vector*(rack_size/2) + normal*(rack_size/2);
+			vec3 m_b_p2 = m_b_p1 + normal*dist_v;
+			vec3 m_b_p4 = m_b_p1 + (bft_p2 - bft_p1) - vector*rack_size;
+			vec3 m_b_p3 = m_b_p4 + normal*dist_v;			
+
+			//find pair of points for vertical racks 
+			float spacing = 0.05f;
+			int partitions_v = abs(dist_v/spacing);
+			int partitions_h = abs(dist_h/spacing);
+			vec3 v_h(.0f, balcony_height - rack_size, .0f) ;
+
+			//p1, p2
+			for(int i = 0; i < partitions_v; i++)
+			{
+				float t = (float)i/partitions_v;
+				vec3 curr_bot_p = (1-t)*m_b_p1 + t*m_b_p2;
+				vec3 curr_top_p = curr_bot_p + v_h;
+				make_vertical_rack(curr_bot_p, curr_top_p, normal);
+			}
+			//p2, p3
+			for(int i = 0; i < partitions_h; i++)
+			{
+				float t = (float)i/partitions_h;
+				vec3 curr_bot_p = (1-t)*m_b_p2 + t*m_b_p3;
+				vec3 curr_top_p = curr_bot_p + v_h;
+				make_vertical_rack(curr_bot_p, curr_top_p, normal);
+			}
+			//p3, p4
+			for(int i = 0; i < partitions_v; i++)
+			{
+				float t = (float)i/partitions_v;
+				vec3 curr_bot_p = (1-t)*m_b_p3 + t*m_b_p4;
+				vec3 curr_top_p = curr_bot_p + v_h;
+				make_vertical_rack(curr_bot_p, curr_top_p, normal);
+			}
+		}
+
+		void make_vertical_rack(vec3 &p_bot, vec3 &p_top, vec3 &normal)
+		{
+			float v_rack_size = 0.02f;//half of the top rack size
+			vec3 v_x = vector * v_rack_size;
+			vec3 v_z = normal * v_rack_size;
+			vec3 v_y = p_top - p_bot;
+
+			vec3 b_p0 = p_bot - v_x/2 + v_z/2;
+			vec3 b_p1 = b_p0 - v_z;
+			vec3 b_p2 = b_p1 + v_x;
+			vec3 b_p3 = b_p0 + v_x;
+
+			vec3 t_p0 = b_p0 + v_y;
+			vec3 t_p1 = b_p1 + v_y;
+			vec3 t_p2 = b_p2 + v_y;
+			vec3 t_p3 = b_p3 + v_y;
+
+			//meshes
+			//front
+			balcony_mesh.push_back(b_p0);
+			balcony_mesh.push_back(t_p0);
+			balcony_mesh.push_back(t_p3);
+			balcony_mesh.push_back(b_p3);
+			//left
+			balcony_mesh.push_back(b_p1);
+			balcony_mesh.push_back(t_p1);
+			balcony_mesh.push_back(t_p0);
+			balcony_mesh.push_back(b_p0);
+			//back
+			balcony_mesh.push_back(b_p2);
+			balcony_mesh.push_back(t_p2);
+			balcony_mesh.push_back(t_p1);
+			balcony_mesh.push_back(b_p1);
+			//right
+			balcony_mesh.push_back(b_p3);
+			balcony_mesh.push_back(t_p3);
+			balcony_mesh.push_back(t_p2);
+			balcony_mesh.push_back(b_p2);
+			//uvs
+			vec2 uv(0, 0), uv1(0, 1);
+			for(int i = 0; i<4; i++)
+			{
+				balcony_uvs.push_back(uv);
+				balcony_uvs.push_back(uv1);
+				balcony_uvs.push_back(uv1 + vec2(1, 0));
+				balcony_uvs.push_back(uv + vec2(1, 0));
+			}
 		}
 	};
 }
