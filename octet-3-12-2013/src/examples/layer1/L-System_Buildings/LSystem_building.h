@@ -68,6 +68,8 @@ namespace octet
 		dynarray<vec2> uvs;
 		dynarray<vec3> frame_mesh;
 		dynarray<vec2> frame_uvs;
+		dynarray<vec3> balcony_mesh;
+		dynarray<vec2> balcony_uvs;
 		dynarray<vec3> floor_mesh;
 		dynarray<vec2> floor_uvs;
 		dynarray<vec3> current_walls;
@@ -92,6 +94,7 @@ namespace octet
 		GLuint wall_tex;
 		GLuint floor_tex;
 		GLuint frame_tex;
+		GLuint balcony_tex;
 		int iteration;
 		int floor_count;
 		int floor_board_vertex_count;
@@ -106,6 +109,9 @@ namespace octet
 		float extension_length;
 		float winSize;
 		float frameSize;
+		float balcony_extention;
+		float balcony_height;
+		float balcony;
 		bool is_stochastic;
 		
 		void ear_clipping_triangulation()
@@ -239,6 +245,10 @@ namespace octet
 				{
 				case 'K':
 					cutWindow();
+					balcony = false;
+					break;
+				case 'B':
+					balcony = true;
 					break;
 				case '(':						
 					//should be in his format : (1.00)
@@ -429,6 +439,10 @@ namespace octet
 			{
 				frame_mesh[i] = frame_mesh[i] - centre_point;
 			}
+			for(unsigned int i = 0; i < balcony_mesh.size(); i++)
+			{
+				balcony_mesh[i] = balcony_mesh[i] - centre_point;
+			}
 		}
 
 	public:
@@ -451,6 +465,9 @@ namespace octet
 			is_stochastic = false;
 			winSize = 1.2f;
 			frameSize = 0.05f;
+			balcony = false;
+			balcony_extention = .4f;
+			balcony_height = .5;
 			vector = vec3(1, 0, 0);
 			extension_length = .3f;
 		}
@@ -520,6 +537,7 @@ namespace octet
 		{
 			wall_tex = resources::get_texture_handle(GL_RGB, "assets/brick_wall.gif");//"!bricks");
 			frame_tex = resources::get_texture_handle(GL_RGB, "assets/test.gif");//"#FFFFFFFF");
+			balcony_tex = resources::get_texture_handle(GL_RGB, "assets/test2.gif");
 			floor_tex = resources::get_texture_handle(GL_RGB, "#7f7f7fff");
 			std::ifstream f(path, std::ios::in);
 			dynarray<std::string> strs;
@@ -642,6 +660,11 @@ namespace octet
 			glVertexAttribPointer(attribute_pos, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)&frame_mesh[0]);
 			glVertexAttribPointer(attribute_uv, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void *)&frame_uvs[0]);
 			glDrawArrays(GL_QUADS, 0, frame_mesh.size());
+
+			glBindTexture(GL_TEXTURE_2D, balcony_tex);
+			glVertexAttribPointer(attribute_pos, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)&balcony_mesh[0]);
+			glVertexAttribPointer(attribute_uv, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void *)&balcony_uvs[0]);
+			glDrawArrays(GL_QUADS, 0, balcony_mesh.size());
 		}
 		//decrease iteration count
 		void decrease_iteration()
@@ -891,6 +914,11 @@ namespace octet
 				uvs.push_back(uv_p3);
 
 				makeWindowFrame(wp0, wp1, wp2, wp3); 
+
+				if(balcony)
+				{
+					addBalcony(p0,p1,p3);
+				}
 			}	
 			winSize = 1.0f;//reset the window size back to default
 		}
@@ -900,11 +928,12 @@ namespace octet
 			float halfFrameSize = frameSize/2;
 			float outerSize = winSize + frameSize;
 			float innerSize = winSize - frameSize;
+			vec3 normal = -cross(wp1 - wp0, wp3 - wp0);
 
 			//find vectors to get fist 4 frame points of wp0
 			vec3 vector_x = vector * halfFrameSize;//(halfFrameSize, .0f, .0f);
 			vec3 vector_y(.0f, halfFrameSize, .0f);			
-			vec3 vector_z(.0f, .0f, halfFrameSize);
+			vec3 vector_z = normal*halfFrameSize;
 
 			//find vectors to get the rest of 3x4 frame point of other 3 window points
 			vec3 inner_y(.0f, innerSize, .0f), outer_y(.0f, outerSize, .0f), inner_x, outer_x;
@@ -963,181 +992,102 @@ namespace octet
 			frame_mesh.push_back(wp1_fp1);
 			frame_mesh.push_back(wp1_fp0);
 			frame_mesh.push_back(wp0_fp0);
-			//uvs
-			vec2 uv(0, 0), uv1(0, 1);
-			frame_uvs.push_back(uv);
-			frame_uvs.push_back(uv1);
-			frame_uvs.push_back(uv1 + vec2(1, 0));
-			frame_uvs.push_back(uv + vec2(1, 0));
-
+			
+			
 			//mesh_outer:
 			frame_mesh.push_back(wp0_fp2);
 			frame_mesh.push_back(wp1_fp2);
 			frame_mesh.push_back(wp1_fp1);
 			frame_mesh.push_back(wp0_fp1);
-			//uvs
-			frame_uvs.push_back(uv);
-			frame_uvs.push_back(uv1);
-			frame_uvs.push_back(uv1 + vec2(1, 0));
-			frame_uvs.push_back(uv + vec2(1, 0));
-
+			
 			//mesh_back:
 			frame_mesh.push_back(wp0_fp3);
 			frame_mesh.push_back(wp1_fp3);
 			frame_mesh.push_back(wp1_fp2);
 			frame_mesh.push_back(wp0_fp2);
-			//uvs
-			frame_uvs.push_back(uv);
-			frame_uvs.push_back(uv1);
-			frame_uvs.push_back(uv1 + vec2(1, 0));
-			frame_uvs.push_back(uv + vec2(1, 0));
-
+			
 			//mesh_inner:
 			frame_mesh.push_back(wp0_fp0);
 			frame_mesh.push_back(wp1_fp0);
 			frame_mesh.push_back(wp1_fp3);
 			frame_mesh.push_back(wp0_fp3);
-			//uvs
-			frame_uvs.push_back(uv);
-			frame_uvs.push_back(uv1);
-			frame_uvs.push_back(uv1 + vec2(1, 0));
-			frame_uvs.push_back(uv + vec2(1, 0));
-
+			
 			//edge2: top
 			//mesh_front: 
 			frame_mesh.push_back(wp1_fp0);
 			frame_mesh.push_back(wp1_fp1);
 			frame_mesh.push_back(wp2_fp1);
 			frame_mesh.push_back(wp2_fp0);
-			//uvs
-			frame_uvs.push_back(uv);
-			frame_uvs.push_back(uv1);
-			frame_uvs.push_back(uv1 + vec2(1, 0));
-			frame_uvs.push_back(uv + vec2(1, 0));
-
+			
 			//mesh_outer:
 			frame_mesh.push_back(wp1_fp1);
 			frame_mesh.push_back(wp1_fp2);
 			frame_mesh.push_back(wp2_fp2);
 			frame_mesh.push_back(wp2_fp1);
-			//uvs
-			frame_uvs.push_back(uv);
-			frame_uvs.push_back(uv1);
-			frame_uvs.push_back(uv1 + vec2(1, 0));
-			frame_uvs.push_back(uv + vec2(1, 0));
-
+			
 			//mesh_back:
 			frame_mesh.push_back(wp1_fp2);
 			frame_mesh.push_back(wp1_fp3);
 			frame_mesh.push_back(wp2_fp3);
 			frame_mesh.push_back(wp2_fp2);
-			//uvs
-			frame_uvs.push_back(uv);
-			frame_uvs.push_back(uv1);
-			frame_uvs.push_back(uv1 + vec2(1, 0));
-			frame_uvs.push_back(uv + vec2(1, 0));
-
+			
 			//mesh_inner:
 			frame_mesh.push_back(wp1_fp3);
 			frame_mesh.push_back(wp1_fp0);
 			frame_mesh.push_back(wp2_fp0);
 			frame_mesh.push_back(wp2_fp3);
-			//uvs
-			frame_uvs.push_back(uv);
-			frame_uvs.push_back(uv1);
-			frame_uvs.push_back(uv1 + vec2(1, 0));
-			frame_uvs.push_back(uv + vec2(1, 0));
-
-
+			
 			//edge3: right
 			//mesh_front: 
 			frame_mesh.push_back(wp3_fp0);
 			frame_mesh.push_back(wp2_fp0);
 			frame_mesh.push_back(wp2_fp1);
 			frame_mesh.push_back(wp3_fp1);
-			//uvs
-			frame_uvs.push_back(uv);
-			frame_uvs.push_back(uv1);
-			frame_uvs.push_back(uv1 + vec2(1, 0));
-			frame_uvs.push_back(uv + vec2(1, 0));
-
+			
 			//mesh_outer:
 			frame_mesh.push_back(wp3_fp1);
 			frame_mesh.push_back(wp2_fp1);
 			frame_mesh.push_back(wp2_fp2);
 			frame_mesh.push_back(wp3_fp2);
-			//uvs
-			frame_uvs.push_back(uv);
-			frame_uvs.push_back(uv1);
-			frame_uvs.push_back(uv1 + vec2(1, 0));
-			frame_uvs.push_back(uv + vec2(1, 0));
-
+			
 			//mesh_back:
 			frame_mesh.push_back(wp3_fp2);
 			frame_mesh.push_back(wp2_fp2);
 			frame_mesh.push_back(wp2_fp3);
 			frame_mesh.push_back(wp3_fp3);
-			//uvs
-			frame_uvs.push_back(uv);
-			frame_uvs.push_back(uv1);
-			frame_uvs.push_back(uv1 + vec2(1, 0));
-			frame_uvs.push_back(uv + vec2(1, 0));
-
+			
 			//mesh_inner:
 			frame_mesh.push_back(wp3_fp3);
 			frame_mesh.push_back(wp2_fp3);
 			frame_mesh.push_back(wp2_fp0);
 			frame_mesh.push_back(wp3_fp0);
-			//uvs
-			frame_uvs.push_back(uv);
-			frame_uvs.push_back(uv1);
-			frame_uvs.push_back(uv1 + vec2(1, 0));
-			frame_uvs.push_back(uv + vec2(1, 0));
-
+			
 			//edge4: bottom
 			//mesh_front: 
 			frame_mesh.push_back(wp0_fp1);
 			frame_mesh.push_back(wp0_fp0);
 			frame_mesh.push_back(wp3_fp0);
 			frame_mesh.push_back(wp3_fp1);
-			//uvs
-			frame_uvs.push_back(uv);
-			frame_uvs.push_back(uv1);
-			frame_uvs.push_back(uv1 + vec2(1, 0));
-			frame_uvs.push_back(uv + vec2(1, 0));
-
+			
 			//mesh_outer:
 			frame_mesh.push_back(wp0_fp2);
 			frame_mesh.push_back(wp0_fp1);
 			frame_mesh.push_back(wp3_fp1);
 			frame_mesh.push_back(wp3_fp2);
-			//uvs
-			frame_uvs.push_back(uv);
-			frame_uvs.push_back(uv1);
-			frame_uvs.push_back(uv1 + vec2(1, 0));
-			frame_uvs.push_back(uv + vec2(1, 0));
+			
 
 			//mesh_back:
 			frame_mesh.push_back(wp0_fp3);
 			frame_mesh.push_back(wp0_fp2);
 			frame_mesh.push_back(wp3_fp2);
 			frame_mesh.push_back(wp3_fp3);
-			//uvs
-			frame_uvs.push_back(uv);
-			frame_uvs.push_back(uv1);
-			frame_uvs.push_back(uv1 + vec2(1, 0));
-			frame_uvs.push_back(uv + vec2(1, 0));
-
+		
 			//mesh_inner:
 			frame_mesh.push_back(wp0_fp0);
 			frame_mesh.push_back(wp0_fp3);
 			frame_mesh.push_back(wp3_fp3);
 			frame_mesh.push_back(wp3_fp0);
-			//uvs
-			frame_uvs.push_back(uv);
-			frame_uvs.push_back(uv1);
-			frame_uvs.push_back(uv1 + vec2(1, 0));
-			frame_uvs.push_back(uv + vec2(1, 0));
+			
 
 			// + middle frame's 4 meshes
 			//mpb_fp0, mpb_fp1, mpb_fp2, mpb_fp3, mpt_fp0, mpt_fp1, mpt_fp2, mpt_fp3
@@ -1146,41 +1096,207 @@ namespace octet
 			frame_mesh.push_back(mpt_fp0);
 			frame_mesh.push_back(mpt_fp3);
 			frame_mesh.push_back(mpb_fp3);
-			//uvs
-			frame_uvs.push_back(uv);
-			frame_uvs.push_back(uv1);
-			frame_uvs.push_back(uv1 + vec2(1, 0));
-			frame_uvs.push_back(uv + vec2(1, 0));
+			
 			//left
 			frame_mesh.push_back(mpb_fp1);
 			frame_mesh.push_back(mpt_fp1);
 			frame_mesh.push_back(mpt_fp0);
 			frame_mesh.push_back(mpb_fp0);
-			//uvs
-			frame_uvs.push_back(uv);
-			frame_uvs.push_back(uv1);
-			frame_uvs.push_back(uv1 + vec2(1, 0));
-			frame_uvs.push_back(uv + vec2(1, 0));
+			
 			//back
 			frame_mesh.push_back(mpb_fp2);
 			frame_mesh.push_back(mpt_fp2);
 			frame_mesh.push_back(mpt_fp1);
 			frame_mesh.push_back(mpb_fp1);
-			//uvs
-			frame_uvs.push_back(uv);
-			frame_uvs.push_back(uv1);
-			frame_uvs.push_back(uv1 + vec2(1, 0));
-			frame_uvs.push_back(uv + vec2(1, 0));
+			
 			//right
 			frame_mesh.push_back(mpb_fp3);
 			frame_mesh.push_back(mpt_fp3);
 			frame_mesh.push_back(mpt_fp2);
 			frame_mesh.push_back(mpb_fp2);
+			
+			//all uvs (repetitive)			
+			vec2 uv(0, 0), uv1(0, 1);
+			for(int i = 0; i < 20; i++)
+			{
+				frame_uvs.push_back(uv);
+				frame_uvs.push_back(uv1);
+				frame_uvs.push_back(uv1 + vec2(1, 0));
+				frame_uvs.push_back(uv + vec2(1, 0));
+			}
+		}
+
+		void addBalcony(vec3 &p0, vec3 &p1, vec3 &p3)
+		{
+			vec3 normal = (-cross(p1 - p0, p3 - p0)).normalize();
+			vec3 balcony_z = normal*balcony_extention;
+			float rack_size = .05f;
+			vec3 balcony_ext_x = .3f*vector;
+			vec3 balcony_ext_y(.0f, .3f, .0f);
+			vec3 balcony_floor_y(.0f, rack_size, .0f);
+			//balcony floor
+			vec3 bft_p1 = p0 + balcony_ext_x + balcony_ext_y; //balcony floor top mesh p1  - offset from window botom left by .2f horizontally and vertically
+			vec3 bft_p0 = bft_p1 + balcony_z;
+			vec3 bft_p2 = p3 - balcony_ext_x + balcony_ext_y;
+			vec3 bft_p3 = bft_p2 + balcony_z;
+
+			vec3 bfb_p0 = bft_p0 - balcony_floor_y; //balcony floor bottom mesh
+			vec3 bfb_p1 = bft_p1 - balcony_floor_y;
+			vec3 bfb_p2 = bft_p2 - balcony_floor_y;
+			vec3 bfb_p3 = bft_p3 - balcony_floor_y;
+
+			//top mesh
+			balcony_mesh.push_back(bft_p0);
+			balcony_mesh.push_back(bft_p1);
+			balcony_mesh.push_back(bft_p2);
+			balcony_mesh.push_back(bft_p3);
+
+			//bottom mesh
+			balcony_mesh.push_back(bfb_p1);
+			balcony_mesh.push_back(bfb_p0);
+			balcony_mesh.push_back(bfb_p3);
+			balcony_mesh.push_back(bfb_p2);
+
+			//left mesh
+			balcony_mesh.push_back(bfb_p1);
+			balcony_mesh.push_back(bft_p1);
+			balcony_mesh.push_back(bft_p0);
+			balcony_mesh.push_back(bfb_p0);
+
+			//front mesh
+			balcony_mesh.push_back(bfb_p0);
+			balcony_mesh.push_back(bft_p0);
+			balcony_mesh.push_back(bft_p3);
+			balcony_mesh.push_back(bfb_p3);
+
+			//right mesh 
+			balcony_mesh.push_back(bfb_p3);
+			balcony_mesh.push_back(bft_p3);
+			balcony_mesh.push_back(bft_p2);
+			balcony_mesh.push_back(bfb_p2);
+
 			//uvs
-			frame_uvs.push_back(uv);
-			frame_uvs.push_back(uv1);
-			frame_uvs.push_back(uv1 + vec2(1, 0));
-			frame_uvs.push_back(uv + vec2(1, 0));
+			vec2 uv(0, 0), uv1(0, 1);
+			for(int i = 0; i < 5; i++)
+			{
+				balcony_uvs.push_back(uv);
+				balcony_uvs.push_back(uv1);
+				balcony_uvs.push_back(uv1 + vec2(1, 0));
+				balcony_uvs.push_back(uv + vec2(1, 0));
+			}
+
+			//top racks
+			vec3 balcony_v(.0f, balcony_height, .0f);
+			vec3 balcony_h = bft_p3 - bft_p0;
+			//left top rack points
+			vec3 brtl_p0 = bft_p0 + balcony_v;
+			vec3 brtl_p1 = bft_p1 + balcony_v;		
+			vec3 brtl_p2 = brtl_p1 + vector*rack_size;
+			vec3 brtl_p3 = brtl_p2 + normal*(balcony_extention - rack_size);
+
+			vec3 brbl_p0 = bfb_p0 + balcony_v;
+			vec3 brbl_p1 = bfb_p1 + balcony_v;
+			vec3 brbl_p2 = brtl_p2 - vec3(.0f, rack_size, .0f); 
+			vec3 brbl_p3 = brtl_p3 - vec3(.0f, rack_size, .0f); 
+
+			//right top rack points
+			vec3 brtr_p2 = bft_p2 + balcony_v;
+			vec3 brtr_p3 = bft_p3 + balcony_v;		
+			vec3 brtr_p1 = brtr_p2 - vector*rack_size;
+			vec3 brtr_p0 = brtr_p1 + normal*(balcony_extention - rack_size);
+
+			vec3 brbr_p2 = bfb_p2 + balcony_v;
+			vec3 brbr_p3 = bfb_p3 + balcony_v;
+			vec3 brbr_p1 = brtr_p1 - vec3(.0f, rack_size, .0f); 
+			vec3 brbr_p0 = brtr_p0 - vec3(.0f, rack_size, .0f); 
+
+			//left rack
+			balcony_mesh.push_back(brtl_p0);
+			balcony_mesh.push_back(brtl_p1);
+			balcony_mesh.push_back(brtl_p2);
+			balcony_mesh.push_back(brtl_p3);
+
+			balcony_mesh.push_back(brbl_p0);
+			balcony_mesh.push_back(brbl_p1);
+			balcony_mesh.push_back(brtl_p1);
+			balcony_mesh.push_back(brtl_p0);
+			
+			balcony_mesh.push_back(brtl_p3);
+			balcony_mesh.push_back(brtl_p2);
+			balcony_mesh.push_back(brbl_p2);
+			balcony_mesh.push_back(brbl_p3);
+
+			balcony_mesh.push_back(brbl_p3);
+			balcony_mesh.push_back(brbl_p2);
+			balcony_mesh.push_back(brbl_p1);
+			balcony_mesh.push_back(brbl_p0);
+
+			for(int i = 0; i < 4; i++)
+			{
+				balcony_uvs.push_back(uv);
+				balcony_uvs.push_back(uv1);
+				balcony_uvs.push_back(uv1 + vec2(1, 0));
+				balcony_uvs.push_back(uv + vec2(1, 0));
+			}
+
+			//front rack
+			balcony_mesh.push_back(brtl_p0);
+			balcony_mesh.push_back(brtl_p3);
+			balcony_mesh.push_back(brtr_p0);
+			balcony_mesh.push_back(brtr_p3);
+
+			balcony_mesh.push_back(brbl_p0);
+			balcony_mesh.push_back(brtl_p0);
+			balcony_mesh.push_back(brtr_p3);
+			balcony_mesh.push_back(brbr_p3);
+			
+			balcony_mesh.push_back(brbl_p3);
+			balcony_mesh.push_back(brbl_p0);
+			balcony_mesh.push_back(brbr_p3);
+			balcony_mesh.push_back(brbr_p0);
+
+			balcony_mesh.push_back(brtl_p3);
+			balcony_mesh.push_back(brbl_p3);
+			balcony_mesh.push_back(brbr_p0);
+			balcony_mesh.push_back(brtr_p0);
+
+			for(int i = 0; i < 4; i++)
+			{
+				balcony_uvs.push_back(uv);
+				balcony_uvs.push_back(uv1);
+				balcony_uvs.push_back(uv1 + vec2(1, 0));
+				balcony_uvs.push_back(uv + vec2(1, 0));
+			}
+
+			//right rack
+			balcony_mesh.push_back(brtr_p0);
+			balcony_mesh.push_back(brtr_p1);
+			balcony_mesh.push_back(brtr_p2);
+			balcony_mesh.push_back(brtr_p3);
+
+			balcony_mesh.push_back(brbr_p0);
+			balcony_mesh.push_back(brbr_p1);
+			balcony_mesh.push_back(brtr_p1);
+			balcony_mesh.push_back(brtr_p0);
+			
+			balcony_mesh.push_back(brtr_p3);
+			balcony_mesh.push_back(brtr_p2);
+			balcony_mesh.push_back(brbr_p2);
+			balcony_mesh.push_back(brbr_p3);
+
+			balcony_mesh.push_back(brbr_p3);
+			balcony_mesh.push_back(brbr_p2);
+			balcony_mesh.push_back(brbr_p1);
+			balcony_mesh.push_back(brbr_p0);
+
+			for(int i = 0; i < 4; i++)
+			{
+				balcony_uvs.push_back(uv);
+				balcony_uvs.push_back(uv1);
+				balcony_uvs.push_back(uv1 + vec2(1, 0));
+				balcony_uvs.push_back(uv + vec2(1, 0));
+			}
+			//horisontal racks
 		}
 	};
 }
