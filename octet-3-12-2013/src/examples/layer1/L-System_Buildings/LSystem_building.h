@@ -101,6 +101,7 @@ namespace octet
 		int floor_side_index;
 		float centre_of_ground_floor;
 		float angle;
+		float current_angle;
 		float branch_length;
 		float branch_length_decrement;
 		float floor_board_thickness;
@@ -238,6 +239,7 @@ namespace octet
 			uvs.reset();
 			mat4t m;
 			max_point = min_point = vec3(0, 0, 0);
+			current_angle = 0;
 			for(unsigned int i = 0; i < output_str.size(); i++)
 			{
 				std::string float_str = "";
@@ -271,13 +273,19 @@ namespace octet
 					break;
 				case '+':
 					current_state.m = current_state.m * m_rotate_y_positive;
+					current_angle += angle;
 					break;
 				case '-':
 					current_state.m = current_state.m * m_rotate_y_negative;
+					current_angle -= angle;
 					break;
 				}
 			}
-			enclose();
+			//if the absolute value of current_angle is over 360, it means the building is already enclosed
+			if(abs(current_angle) < 360.f)
+			{
+				enclose();
+			}
 
 			translate_building_to_origin();
 
@@ -322,8 +330,11 @@ namespace octet
 			vec3 v(0.f, floor_board_thickness, 0.f);
 			int index = floor_side_index;
 			int index1;
-			int j = 0;
-			for(; j < floor_board_vertex_count - 1; j++)
+			//make it possible for the loop to reach to segment between the starting point and the end point
+			floor_mesh[floor_board_vertex_count] = floor_mesh[0];
+			floor_uvs[floor_board_vertex_count] = vec2((floor_uvs[floor_board_vertex_count - 1] - floor_uvs[0]).length(), 0);
+			//
+			for(int j = 0; j < floor_board_vertex_count; j++)
 			{
 				index1 = index + j * 6;
 				floor_mesh[index1] = floor_mesh[j];
@@ -334,26 +345,12 @@ namespace octet
 				floor_mesh[index1 + 5] = floor_mesh[j];
 
 				floor_uvs[index1] = floor_uvs[j];
-				floor_uvs[index1 + 1] = floor_uvs[j];
-				floor_uvs[index1 + 2] = floor_uvs[j + 1];
-				floor_uvs[index1 + 3] = floor_uvs[j + 1];
+				floor_uvs[index1 + 1] = floor_uvs[j] + vec2(0, floor_board_thickness);
+				floor_uvs[index1 + 2] = floor_uvs[j + 1] + vec2(0, floor_board_thickness);
+				floor_uvs[index1 + 3] = floor_uvs[j + 1] + vec2(0, floor_board_thickness);
 				floor_uvs[index1 + 4] = floor_uvs[j + 1];
 				floor_uvs[index1 + 5] = floor_uvs[j];
 			}
-			index1 = index + j * 6;
-			floor_mesh[index1] = floor_mesh[j];
-			floor_mesh[index1 + 1] = floor_mesh[j] + v;
-			floor_mesh[index1 + 2] = floor_mesh[0] + v;
-			floor_mesh[index1 + 3] = floor_mesh[0] + v;
-			floor_mesh[index1 + 4] = floor_mesh[0];
-			floor_mesh[index1 + 5] = floor_mesh[j];
-
-			floor_uvs[index1] = floor_uvs[j];
-			floor_uvs[index1 + 1] = floor_uvs[j];
-			floor_uvs[index1 + 2] = floor_uvs[0];
-			floor_uvs[index1 + 3] = floor_uvs[0];
-			floor_uvs[index1 + 4] = floor_uvs[0];
-			floor_uvs[index1 + 5] = floor_uvs[j];
 			int vertex_count = 6 * floor_board_vertex_count;
 			index += vertex_count;
 			for(int i = 1; i < floor_board_count; i++)
@@ -370,13 +367,13 @@ namespace octet
 		void extend_floor_polygon()
 		{
 			vec3 start = floor_mesh[1] - floor_mesh[0];
-			vec3 end = floor_mesh[0] - floor_mesh[floor_mesh.size() - 1];
+			vec3 end = floor_mesh[0] - floor_mesh[floor_board_vertex_count - 1];
 			float dir = cross(start, end).y();
 			vec3 v = floor_mesh[0];
-			floor_mesh.resize(floor_mesh.size() + 2);
-			floor_mesh[floor_mesh.size() - 2] = floor_mesh[0];
-			floor_mesh[floor_mesh.size() - 1] = floor_mesh[1];
-			for(unsigned int i = 0; i < floor_mesh.size() - 2; i++)
+			floor_mesh.resize(floor_board_vertex_count + 2);
+			floor_mesh[floor_board_vertex_count] = floor_mesh[0];
+			floor_mesh[floor_board_vertex_count + 1] = floor_mesh[1];
+			for(int i = 0; i < floor_board_vertex_count; i++)
 			{
 				int index1 = i + 1;
 				vec3 v1 = floor_mesh[index1] - v;
@@ -394,9 +391,14 @@ namespace octet
 				float bisector_length = abs(extension_length / dot(upright, v3));
 				floor_mesh[index1] += v3 * bisector_length;
 			}
-			floor_mesh[0] = floor_mesh[floor_mesh.size() - 2];
+			floor_mesh[0] = floor_mesh[floor_board_vertex_count];
 			floor_mesh.pop_back();
 			floor_mesh.pop_back();
+			floor_uvs[0] = vec2(0, 0);
+			for(int i = 0; i < floor_board_vertex_count - 1; i++)
+			{
+				floor_uvs[i + 1] = floor_uvs[i] + vec2((floor_mesh[i] - floor_mesh[i + 1]).length(), 0);
+			}
 		}
 
 		void create_horizontal_surface_for_each_floor()
@@ -536,9 +538,9 @@ namespace octet
 		void load(char *path) 	
 		{
 			wall_tex = resources::get_texture_handle(GL_RGB, "assets/brick_wall.gif");//"!bricks");
-			frame_tex = resources::get_texture_handle(GL_RGB, "assets/test.gif");//"#FFFFFFFF");
-			balcony_tex = resources::get_texture_handle(GL_RGB, "assets/test2.gif");
-			floor_tex = resources::get_texture_handle(GL_RGB, "#7f7f7fff");
+			frame_tex = resources::get_texture_handle(GL_RGB, "assets/frame.gif");//"#FFFFFFFF");
+			balcony_tex = resources::get_texture_handle(GL_RGB, "assets/balcony.gif");
+			floor_tex = resources::get_texture_handle(GL_RGBA, "assets/floor.gif");
 			std::ifstream f(path, std::ios::in);
 			dynarray<std::string> strs;
 			rules.reset();
@@ -1285,8 +1287,8 @@ namespace octet
 
 			//find pair of points for vertical racks 
 			float spacing = 0.05f;
-			int partitions_v = abs(dist_v/spacing);
-			int partitions_h = abs(dist_h/spacing);
+			int partitions_v = (int)abs(dist_v/spacing);
+			int partitions_h = (int)abs(dist_h/spacing);
 			vec3 v_h(.0f, balcony_height - rack_size, .0f) ;
 
 			//p1, p2

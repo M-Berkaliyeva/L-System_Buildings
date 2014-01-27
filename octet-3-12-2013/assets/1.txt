@@ -7,14 +7,15 @@ wall height
 floor count
 15
 angle
-25
+45
 branch length
 2
 iteration
-1
+2
 axiom
-F
+AC
 letters
-F
+AC
 rules
-FB(0.80)K+FBK-F-F+FBK+FK+FBK+FK+FBK
+F+FKF-FKF-FKF+F
+F--FKFA--A(0.80)KF(0.20)KK(1.80)KF(0.80)KA-K-FFA--FA
