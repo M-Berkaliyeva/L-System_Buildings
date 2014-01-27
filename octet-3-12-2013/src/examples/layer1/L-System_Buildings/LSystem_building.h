@@ -62,6 +62,7 @@ namespace octet
 			}
 		};
 
+		texture_shader &texture_shader_;
 		std::string axiom;
 		std::string output_str;
 		dynarray<vec3> mesh;
@@ -87,6 +88,7 @@ namespace octet
 		mat4t m_rotate_x_180;
 		mat4t m_rotate_y_180;
 		mat4t m_rotate_z_180;
+		mat4t model_to_world;
 		vec3 initial_pos;
 		vec3 vector;
 		//minimum point and maximum point of a bounding rectangle
@@ -112,8 +114,8 @@ namespace octet
 		float frameSize;
 		float balcony_extention;
 		float balcony_height;
-		float balcony;
 		bool is_stochastic;
+		bool balcony;
 		
 		void ear_clipping_triangulation()
 		{
@@ -448,13 +450,14 @@ namespace octet
 		}
 
 	public:
-		lsystem() : initial_pos(0, 0, 0),
+		lsystem(texture_shader &s) : initial_pos(0, 0, 0),
 		floor_count(2),
 		wall_height(2),
 		floor_board_thickness(.2f),
 		floor_board_vertex_count(0),
 		centre_of_ground_floor(0),
-		floor_side_index(0)
+		floor_side_index(0),
+		texture_shader_(s)
 		{
 			srand((DWORD)time(NULL));
 			m_rotate_x_180.loadIdentity();
@@ -472,6 +475,24 @@ namespace octet
 			balcony_height = .5;
 			vector = vec3(1, 0, 0);
 			extension_length = .3f;
+		}
+
+		// get world position
+		const vec3 &get_world_position() const
+		{
+			return model_to_world.w().xyz();
+		}
+
+		// set world position
+		void set_world_position(const vec3 &pos)
+		{
+			model_to_world.w() = vec4(pos, 1);
+		}
+
+		// rotate the building around y axis
+		void rotate_y(float degree)
+		{
+			model_to_world.rotateY(degree);
 		}
 
 		//get building height
@@ -549,6 +570,7 @@ namespace octet
 			floor_board_thickness = .2f;
 			floor_count = 1;
 			is_stochastic = false;
+			model_to_world.loadIdentity();
 			if(f)
 			{
 				std::string str;
@@ -641,8 +663,10 @@ namespace octet
 		}
 
 		//render both branch mesh
-		void render()
+		void render(const mat4t &camera_to_world)
 		{
+			mat4t modelToProjection = mat4t::build_projection_matrix(model_to_world, camera_to_world);
+			texture_shader_.render(modelToProjection, 0);
 			glEnableVertexAttribArray(attribute_pos);
 			glEnableVertexAttribArray(attribute_uv);
 

@@ -7,8 +7,6 @@ class LSystem_building_app : public app {
 	unsigned int key_cool_down;
 
 	// Matrix to transform points in our camera space to the world.
-	// This lets us move our camera
-	mat4t cameraToWorld;
 
 	// texture shader
 	texture_shader texture_shader_;
@@ -36,7 +34,8 @@ class LSystem_building_app : public app {
 	mouse_x(0),
 	mouse_y(0),
 	mouse_wheel(0),
-	is_left_button_down(false)
+	is_left_button_down(false),
+	l(texture_shader_)
 	{
 	}
 
@@ -46,9 +45,6 @@ class LSystem_building_app : public app {
 		l.load("..\\..\\assets\\1.txt");
 		// initialize the shader
 		texture_shader_.init();
-
-		// put the triangle at the center of the world
-		modelToWorld.loadIdentity();
 
 		// set camera control info
 		cc.set_view_distance(20);
@@ -77,13 +73,7 @@ class LSystem_building_app : public app {
 		// allow Z buffer depth testing (closer objects are always drawn in front of far ones)
 		glEnable(GL_DEPTH_TEST);
 
-		// build a projection matrix: model -> world -> camera -> projection
-		// the projection space is the cube -1 <= x/w, y/w, z/w <= 1
-		mat4t modelToProjection = mat4t::build_projection_matrix(modelToWorld, cameraToWorld);
-		cameraToWorld = cc.get_matrix();
-
 		vec4 color(0, 1, 0, 1);
-		texture_shader_.render(modelToProjection, 0);
 
 		//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
@@ -91,7 +81,7 @@ class LSystem_building_app : public app {
 		// attribute_pos (=0) is position of each corner
 		// each corner has 3 floats (x, y, z)
 		// there is no gap between the 3 floats and hence the stride is 3*sizeof(float)
-		l.render();
+		l.render(cc.get_matrix());
 		if(is_key_down(key_lmb) && !is_left_button_down)
 		{
 			is_left_button_down = true;
