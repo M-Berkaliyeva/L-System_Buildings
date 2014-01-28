@@ -5,7 +5,7 @@ extension length
 wall height
 2
 floor count
-15
+25
 angle
 45
 branch length
@@ -17,5 +17,5 @@ AC
 letters
 AC
 rules
-F+FKF-FKF-FKF+F
-F--FKFA--A(0.80)KF(0.20)KK(1.80)KF(0.80)KA-K-FFA--FA
+F+FBKF-FBKF-FBKF+F
+F--FKFA--A(0.80)KF(1.50)KK(0.50)KF(0.80)KA-K-FFA--FA

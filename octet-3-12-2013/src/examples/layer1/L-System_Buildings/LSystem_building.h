@@ -90,6 +90,7 @@ namespace octet
 		mat4t m_rotate_z_180;
 		mat4t model_to_world;
 		vec3 initial_pos;
+		vec3 wall_norm;
 		vec3 vector;
 		//minimum point and maximum point of a bounding rectangle
 		vec3 min_point, max_point;
@@ -101,6 +102,7 @@ namespace octet
 		int floor_count;
 		int floor_board_vertex_count;
 		int floor_side_index;
+		int window_count;
 		float centre_of_ground_floor;
 		float angle;
 		float current_angle;
@@ -111,9 +113,10 @@ namespace octet
 		float building_height;
 		float extension_length;
 		float winSize;
+		float maxWinSize;
 		float frameSize;
 		float balcony_extention;
-		float balcony_height;
+		float balcony_height;		
 		bool is_stochastic;
 		bool balcony;
 		
@@ -250,20 +253,25 @@ namespace octet
 				case 'K':
 					cutWindow();
 					balcony = false;
+					window_count +=1;
 					break;
 				case 'B':
 					balcony = true;
 					break;
-				case '(':						
+				case '(':	
+					maxWinSize = winSize;
 					//should be in his format : (1.00)
 					float_str.push_back(output_str[i+1]);
 					float_str.push_back(output_str[i+2]);
 					float_str.push_back(output_str[i+3]);
 					float_str.push_back(output_str[i+4]);
 					winSize = (float)atof(float_str.c_str());
+					if(winSize>maxWinSize)
+						maxWinSize = winSize;
 					i+=5;
 					break;
 				case 'F':
+					window_count = 0;
 					extend();
 					current_state.m.loadIdentity();
 					break;
@@ -288,7 +296,7 @@ namespace octet
 			{
 				enclose();
 			}
-
+			
 			translate_building_to_origin();
 
 			floor_board_vertex_count = floor_mesh.size();
@@ -803,22 +811,26 @@ namespace octet
 			vector_h = vector * current_state.length;
 			vec3 p2 = p1 + vector_h;
 			vec3 p3 = p0 + vector_h;
+			wall_norm = (cross(p1 - p0, p3 - p0)).normalize();
+
 			float target_u = current_state.u + current_state.length;
 			vec2 uv(current_state.u, 0), uv1(current_state.u, wall_height), uv2(target_u, wall_height), uv3(target_u, 0);
+
 			current_walls_uvs.push_back(uv);
 			current_walls_uvs.push_back(uv1);
 			current_walls_uvs.push_back(uv2);
 			current_walls_uvs.push_back(uv3);
+
+			current_walls.push_back(p0);
+			current_walls.push_back(p1);
+			current_walls.push_back(p2);
+			current_walls.push_back(p3);
 			for(int i = 0; i < floor_count; i++)
 			{
 				mesh.push_back(p0);
 				mesh.push_back(p1);
 				mesh.push_back(p2);
-				mesh.push_back(p3);
-				current_walls.push_back(p0);
-				current_walls.push_back(p1);
-				current_walls.push_back(p2);
-				current_walls.push_back(p3);
+				mesh.push_back(p3);				
 				uvs.push_back(uv);
 				uvs.push_back(uv1);
 				uvs.push_back(uv2);
@@ -839,12 +851,32 @@ namespace octet
 		}
 
 		void cutWindow()
-		{				
+		{	
 			int size = mesh.size();
 			int curr_size = current_walls.size();
 			int uvSize = uvs.size();	
 			float halfWidth = winSize/2;
 
+			//eraze prev wall meshes of windows
+			for(int i = 0; i < floor_count; i++)
+			{				
+				if(window_count>0)//this is case for several windows in one wall
+				{
+					size = mesh.size();
+					for(int j = 1; j < 17; j++)
+					{
+						mesh.erase(size-j);
+						uvs.erase(uvSize-j);
+					}
+				}else{
+					size = mesh.size();
+					for(int j = 1; j<5; j++)
+					{
+						mesh.erase(size-j);
+						uvs.erase(uvSize-j);
+					}
+				}
+			}			
 			//find relative uv coordinates 
 			vec2 uv_p0 = current_walls_uvs[0];
 			vec2 uv_p1 = current_walls_uvs[1];
@@ -857,44 +889,39 @@ namespace octet
 			vec2 uv_wp1(u_wp0, v_wp0 + winSize);
 			vec2 uv_wp2(u_wp0 + winSize, v_wp0 + winSize);
 			vec2 uv_wp3(u_wp0 + winSize, v_wp0);
+										
+			//store last 4 points from floor_mesh as current wall 
+			vec3 p0 = current_walls[0];
+			vec3 p1 = current_walls[1];
+			vec3 p2 = current_walls[2];
+			vec3 p3 = current_walls[3];
 
-			//eraze prev wall meshes of windows
-			for(int i = 1; i < curr_size +1; i++)
+			//find midpoint on the left edge of the wall
+			float t = 0.5f;			
+			vec3 left_midpoint = (1-t)*p0 + t*p1;
+
+			//find distance to the middle of the wall
+			float dist = branch_length/2;
+		
+			//find vector after rotation
+			vec3 vector_h = vector * halfWidth;
+			vec3 vector_v(.0f, halfWidth, .0f);
+		
+			//find  midpoint after rotation
+			vec3 midpoint = left_midpoint + dist * vector;
+
+			//find four points of the window
+			vec3 wp0 = midpoint - vector_h - vector_v;//bottom left
+			vector_v = vector_v * 2;
+			vector_h = vector_h * 2;
+			vec3 wp1 = wp0 + vector_v;//top left
+			vec3 wp2 = wp1 + vector_h;//top right
+			vec3 wp3 = wp0 + vector_h;//bottom right
+			
+			vec3 next_floor(.0f, wall_height, .0f);
+			for(int i = 0; i < floor_count; i++)
 			{
-				mesh.erase(size-i);
-				uvs.erase(uvSize-i);
-			}			
-			for(int j = 0; j < curr_size; j = j+4)
-			{				
-				//store last 4 points from floor_mesh as current wall 
-				vec3 p0 = current_walls[j];
-				vec3 p1 = current_walls[j+1];
-				vec3 p2 = current_walls[j+2];
-				vec3 p3 = current_walls[j+3];
-
-				//find midpoint on the left edge of the wall
-				float t = 0.5f;			
-				vec3 left_midpoint = (1-t)*p0 + t*p1;
-				//find distance to the middle of the wall
-				float dist = branch_length/2;
-			
-				//find vector after rotation
-				vec3 vector_h = vector * halfWidth;
-				vec3 vector_v(.0f, halfWidth, .0f);
-			
-				//find  midpoint after rotation
-				vec3 midpoint = left_midpoint + dist * vector;
-
-				//find four points of the window
-				vec3 wp0 = midpoint - vector_h - vector_v;//bottom left
-				vector_v = vector_v * 2;
-				vector_h = vector_h * 2;
-				vec3 wp1 = wp0 + vector_v;//top left
-				vec3 wp2 = wp1 + vector_h;//top right
-				vec3 wp3 = wp0 + vector_h;//bottom right
-			
 				//add 4 new quads to the dynarray
-
 				//mesh 1: p0, p1, wp1, wp0
 				mesh.push_back(p0);
 				mesh.push_back(p1);
@@ -945,7 +972,17 @@ namespace octet
 				{
 					addBalcony(p0,p1,p3);
 				}
-			}	
+				
+				p0 += next_floor;
+				p1 += next_floor;
+				p2 += next_floor;
+				p3 += next_floor;
+
+				wp0 += next_floor;
+				wp1 += next_floor;
+				wp2 += next_floor;
+				wp3 += next_floor;						
+			}
 			winSize = 1.0f;//reset the window size back to default
 		}
 
@@ -954,12 +991,12 @@ namespace octet
 			float halfFrameSize = frameSize/2;
 			float outerSize = winSize + frameSize;
 			float innerSize = winSize - frameSize;
-			vec3 normal = -cross(wp1 - wp0, wp3 - wp0);
+			//vec3 normal = -cross(wp1 - wp0, wp3 - wp0);
 
 			//find vectors to get fist 4 frame points of wp0
 			vec3 vector_x = vector * halfFrameSize;//(halfFrameSize, .0f, .0f);
 			vec3 vector_y(.0f, halfFrameSize, .0f);			
-			vec3 vector_z = normal*halfFrameSize;
+			vec3 vector_z = wall_norm*halfFrameSize;
 
 			//find vectors to get the rest of 3x4 frame point of other 3 window points
 			vec3 inner_y(.0f, innerSize, .0f), outer_y(.0f, outerSize, .0f), inner_x, outer_x;
@@ -1011,110 +1048,106 @@ namespace octet
 			vec3 mpt_fp3 = mpb_fp3 + inner_y;
 
 			//create 16 frame meshes (16 because other 4 are not visible)
-
 			//edge1: left
 			//mesh_front: 
 			frame_mesh.push_back(wp0_fp1);
 			frame_mesh.push_back(wp1_fp1);
 			frame_mesh.push_back(wp1_fp0);
 			frame_mesh.push_back(wp0_fp0);
-			
-			
+
 			//mesh_outer:
 			frame_mesh.push_back(wp0_fp2);
 			frame_mesh.push_back(wp1_fp2);
 			frame_mesh.push_back(wp1_fp1);
 			frame_mesh.push_back(wp0_fp1);
-			
+		
 			//mesh_back:
 			frame_mesh.push_back(wp0_fp3);
 			frame_mesh.push_back(wp1_fp3);
 			frame_mesh.push_back(wp1_fp2);
 			frame_mesh.push_back(wp0_fp2);
-			
+		
 			//mesh_inner:
 			frame_mesh.push_back(wp0_fp0);
 			frame_mesh.push_back(wp1_fp0);
 			frame_mesh.push_back(wp1_fp3);
 			frame_mesh.push_back(wp0_fp3);
-			
+		
 			//edge2: top
 			//mesh_front: 
 			frame_mesh.push_back(wp1_fp0);
 			frame_mesh.push_back(wp1_fp1);
 			frame_mesh.push_back(wp2_fp1);
 			frame_mesh.push_back(wp2_fp0);
-			
+		
 			//mesh_outer:
 			frame_mesh.push_back(wp1_fp1);
 			frame_mesh.push_back(wp1_fp2);
 			frame_mesh.push_back(wp2_fp2);
 			frame_mesh.push_back(wp2_fp1);
-			
+		
 			//mesh_back:
 			frame_mesh.push_back(wp1_fp2);
 			frame_mesh.push_back(wp1_fp3);
 			frame_mesh.push_back(wp2_fp3);
 			frame_mesh.push_back(wp2_fp2);
-			
+		
 			//mesh_inner:
 			frame_mesh.push_back(wp1_fp3);
 			frame_mesh.push_back(wp1_fp0);
 			frame_mesh.push_back(wp2_fp0);
 			frame_mesh.push_back(wp2_fp3);
-			
+		
 			//edge3: right
 			//mesh_front: 
 			frame_mesh.push_back(wp3_fp0);
 			frame_mesh.push_back(wp2_fp0);
 			frame_mesh.push_back(wp2_fp1);
 			frame_mesh.push_back(wp3_fp1);
-			
+		
 			//mesh_outer:
 			frame_mesh.push_back(wp3_fp1);
 			frame_mesh.push_back(wp2_fp1);
 			frame_mesh.push_back(wp2_fp2);
 			frame_mesh.push_back(wp3_fp2);
-			
+		
 			//mesh_back:
 			frame_mesh.push_back(wp3_fp2);
 			frame_mesh.push_back(wp2_fp2);
 			frame_mesh.push_back(wp2_fp3);
 			frame_mesh.push_back(wp3_fp3);
-			
+		
 			//mesh_inner:
 			frame_mesh.push_back(wp3_fp3);
 			frame_mesh.push_back(wp2_fp3);
 			frame_mesh.push_back(wp2_fp0);
 			frame_mesh.push_back(wp3_fp0);
-			
+		
 			//edge4: bottom
 			//mesh_front: 
 			frame_mesh.push_back(wp0_fp1);
 			frame_mesh.push_back(wp0_fp0);
 			frame_mesh.push_back(wp3_fp0);
 			frame_mesh.push_back(wp3_fp1);
-			
+		
 			//mesh_outer:
 			frame_mesh.push_back(wp0_fp2);
 			frame_mesh.push_back(wp0_fp1);
 			frame_mesh.push_back(wp3_fp1);
 			frame_mesh.push_back(wp3_fp2);
-			
-
+		
 			//mesh_back:
 			frame_mesh.push_back(wp0_fp3);
 			frame_mesh.push_back(wp0_fp2);
 			frame_mesh.push_back(wp3_fp2);
 			frame_mesh.push_back(wp3_fp3);
-		
+	
 			//mesh_inner:
 			frame_mesh.push_back(wp0_fp0);
 			frame_mesh.push_back(wp0_fp3);
 			frame_mesh.push_back(wp3_fp3);
 			frame_mesh.push_back(wp3_fp0);
-			
-
+		
 			// + middle frame's 4 meshes
 			//mpb_fp0, mpb_fp1, mpb_fp2, mpb_fp3, mpt_fp0, mpt_fp1, mpt_fp2, mpt_fp3
 			//front
@@ -1122,25 +1155,25 @@ namespace octet
 			frame_mesh.push_back(mpt_fp0);
 			frame_mesh.push_back(mpt_fp3);
 			frame_mesh.push_back(mpb_fp3);
-			
+		
 			//left
 			frame_mesh.push_back(mpb_fp1);
 			frame_mesh.push_back(mpt_fp1);
 			frame_mesh.push_back(mpt_fp0);
 			frame_mesh.push_back(mpb_fp0);
-			
+		
 			//back
 			frame_mesh.push_back(mpb_fp2);
 			frame_mesh.push_back(mpt_fp2);
 			frame_mesh.push_back(mpt_fp1);
 			frame_mesh.push_back(mpb_fp1);
-			
+		
 			//right
 			frame_mesh.push_back(mpb_fp3);
 			frame_mesh.push_back(mpt_fp3);
 			frame_mesh.push_back(mpt_fp2);
 			frame_mesh.push_back(mpb_fp2);
-			
+		
 			//all uvs (repetitive)			
 			vec2 uv(0, 0), uv1(0, 1);
 			for(int i = 0; i < 20; i++)
@@ -1151,11 +1184,11 @@ namespace octet
 				frame_uvs.push_back(uv + vec2(1, 0));
 			}
 		}
-
+				
 		void addBalcony(vec3 &p0, vec3 &p1, vec3 &p3)
 		{
-			vec3 normal = (-cross(p1 - p0, p3 - p0)).normalize();
-			vec3 balcony_z = normal*balcony_extention;
+			//vec3 normal = (-cross(p1 - p0, p3 - p0)).normalize();
+			vec3 balcony_z = wall_norm*balcony_extention;
 			float rack_size = .05f;
 			vec3 balcony_ext_x = .3f*vector;
 			vec3 balcony_ext_y(.0f, .3f, .0f);
@@ -1200,7 +1233,7 @@ namespace octet
 			balcony_mesh.push_back(bft_p3);
 			balcony_mesh.push_back(bft_p2);
 			balcony_mesh.push_back(bfb_p2);			
-			
+		
 			//top racks
 			vec3 balcony_v(.0f, balcony_height, .0f);
 			vec3 balcony_h = bft_p3 - bft_p0;
@@ -1208,7 +1241,7 @@ namespace octet
 			vec3 brtl_p0 = bft_p0 + balcony_v;
 			vec3 brtl_p1 = bft_p1 + balcony_v;		
 			vec3 brtl_p2 = brtl_p1 + vector*rack_size;
-			vec3 brtl_p3 = brtl_p2 + normal*(balcony_extention - rack_size);
+			vec3 brtl_p3 = brtl_p2 + wall_norm*(balcony_extention - rack_size);
 
 			vec3 brbl_p0 = bfb_p0 + balcony_v;
 			vec3 brbl_p1 = bfb_p1 + balcony_v;
@@ -1219,7 +1252,7 @@ namespace octet
 			vec3 brtr_p2 = bft_p2 + balcony_v;
 			vec3 brtr_p3 = bft_p3 + balcony_v;		
 			vec3 brtr_p1 = brtr_p2 - vector*rack_size;
-			vec3 brtr_p0 = brtr_p1 + normal*(balcony_extention - rack_size);
+			vec3 brtr_p0 = brtr_p1 + wall_norm*(balcony_extention - rack_size);
 
 			vec3 brbr_p2 = bfb_p2 + balcony_v;
 			vec3 brbr_p3 = bfb_p3 + balcony_v;
@@ -1236,7 +1269,7 @@ namespace octet
 			balcony_mesh.push_back(brbl_p1);
 			balcony_mesh.push_back(brtl_p1);
 			balcony_mesh.push_back(brtl_p0);
-			
+		
 			balcony_mesh.push_back(brtl_p3);
 			balcony_mesh.push_back(brtl_p2);
 			balcony_mesh.push_back(brbl_p2);
@@ -1246,7 +1279,7 @@ namespace octet
 			balcony_mesh.push_back(brbl_p2);
 			balcony_mesh.push_back(brbl_p1);
 			balcony_mesh.push_back(brbl_p0);
-						
+					
 			//front rack
 			balcony_mesh.push_back(brtl_p0);
 			balcony_mesh.push_back(brtl_p3);
@@ -1257,7 +1290,7 @@ namespace octet
 			balcony_mesh.push_back(brtl_p0);
 			balcony_mesh.push_back(brtr_p3);
 			balcony_mesh.push_back(brbr_p3);
-			
+		
 			balcony_mesh.push_back(brbl_p3);
 			balcony_mesh.push_back(brbl_p0);
 			balcony_mesh.push_back(brbr_p3);
@@ -1267,7 +1300,7 @@ namespace octet
 			balcony_mesh.push_back(brbl_p3);
 			balcony_mesh.push_back(brbr_p0);
 			balcony_mesh.push_back(brtr_p0);
-			
+		
 			//right rack
 			balcony_mesh.push_back(brtr_p0);
 			balcony_mesh.push_back(brtr_p1);
@@ -1278,7 +1311,7 @@ namespace octet
 			balcony_mesh.push_back(brbr_p1);
 			balcony_mesh.push_back(brtr_p1);
 			balcony_mesh.push_back(brtr_p0);
-			
+		
 			balcony_mesh.push_back(brtr_p3);
 			balcony_mesh.push_back(brtr_p2);
 			balcony_mesh.push_back(brbr_p2);
@@ -1288,7 +1321,6 @@ namespace octet
 			balcony_mesh.push_back(brbr_p2);
 			balcony_mesh.push_back(brbr_p1);
 			balcony_mesh.push_back(brbr_p0);
-
 
 			//uvs
 			vec2 uv(0, 0), uv1(0, 1);
@@ -1304,13 +1336,13 @@ namespace octet
 			float dist_v = balcony_extention - rack_size;
 			float dist_h = (bft_p2 - bft_p1).length() - rack_size;
 			//find 4 center points of the top racks 
-			vec3 m_b_p1 = bft_p1 + vector*(rack_size/2) + normal*(rack_size/2);
-			vec3 m_b_p2 = m_b_p1 + normal*dist_v;
+			vec3 m_b_p1 = bft_p1 + vector*(rack_size/2) + wall_norm*(rack_size/2);
+			vec3 m_b_p2 = m_b_p1 + wall_norm*dist_v;
 			vec3 m_b_p4 = m_b_p1 + (bft_p2 - bft_p1) - vector*rack_size;
-			vec3 m_b_p3 = m_b_p4 + normal*dist_v;			
+			vec3 m_b_p3 = m_b_p4 + wall_norm*dist_v;			
 
 			//find pair of points for vertical racks 
-			float spacing = 0.05f;
+			float spacing = 0.07f;
 			int partitions_v = (int)abs(dist_v/spacing);
 			int partitions_h = (int)abs(dist_h/spacing);
 			vec3 v_h(.0f, balcony_height - rack_size, .0f) ;
@@ -1321,7 +1353,7 @@ namespace octet
 				float t = (float)i/partitions_v;
 				vec3 curr_bot_p = (1-t)*m_b_p1 + t*m_b_p2;
 				vec3 curr_top_p = curr_bot_p + v_h;
-				make_vertical_rack(curr_bot_p, curr_top_p, normal);
+				make_vertical_rack(curr_bot_p, curr_top_p);
 			}
 			//p2, p3
 			for(int i = 0; i < partitions_h; i++)
@@ -1329,7 +1361,7 @@ namespace octet
 				float t = (float)i/partitions_h;
 				vec3 curr_bot_p = (1-t)*m_b_p2 + t*m_b_p3;
 				vec3 curr_top_p = curr_bot_p + v_h;
-				make_vertical_rack(curr_bot_p, curr_top_p, normal);
+				make_vertical_rack(curr_bot_p, curr_top_p);
 			}
 			//p3, p4
 			for(int i = 0; i < partitions_v; i++)
@@ -1337,15 +1369,15 @@ namespace octet
 				float t = (float)i/partitions_v;
 				vec3 curr_bot_p = (1-t)*m_b_p3 + t*m_b_p4;
 				vec3 curr_top_p = curr_bot_p + v_h;
-				make_vertical_rack(curr_bot_p, curr_top_p, normal);
+				make_vertical_rack(curr_bot_p, curr_top_p);
 			}
 		}
 
-		void make_vertical_rack(vec3 &p_bot, vec3 &p_top, vec3 &normal)
+		void make_vertical_rack(vec3 &p_bot, vec3 &p_top)
 		{
 			float v_rack_size = 0.02f;//half of the top rack size
 			vec3 v_x = vector * v_rack_size;
-			vec3 v_z = normal * v_rack_size;
+			vec3 v_z = wall_norm * v_rack_size;
 			vec3 v_y = p_top - p_bot;
 
 			vec3 b_p0 = p_bot - v_x/2 + v_z/2;
