@@ -18,7 +18,12 @@ class LSystem_building_app : public app {
 	int mouse_y;
 	int mouse_wheel;
 
-	lsystem l;
+	enum
+	{
+		BUILDING_COUNT = 9
+	};
+
+	lsystem l[BUILDING_COUNT];
 
 	camera_control cc;
 
@@ -34,21 +39,35 @@ class LSystem_building_app : public app {
 	mouse_x(0),
 	mouse_y(0),
 	mouse_wheel(0),
-	is_left_button_down(false),
-	l(texture_shader_)
+	is_left_button_down(false)
 	{
 	}
 
 	// this is called once OpenGL is initialized
 	void app_init() {
 
-		l.load("..\\..\\assets\\1.txt");
+		const float DELTA = 60.f;
+		vec3 initial_pos(-DELTA, 0.f, -DELTA);
+		for(int i = 0; i < BUILDING_COUNT; i++)
+		{
+			char buf[256];
+			sprintf(buf, "..\\..\\assets\\%d.txt", i);
+			l[i].load(buf, &texture_shader_);
+			l[i].set_world_position(initial_pos + vec3(i % 3 * DELTA, 0.f, i / 3 * DELTA));
+		}
 		// initialize the shader
 		texture_shader_.init();
 
 		// set camera control info
-		cc.set_view_distance(20);
-		cc.set_view_position(vec3(0.f, l.get_building_height() * .5f, 0.f));
+		cc.set_view_distance(40);
+		for(int i = 0; i < BUILDING_COUNT; i++)
+		{
+			if(l[i].is_loaded())
+			{
+				cc.set_view_position(vec3(0.f, l[i].get_building_height() * .5f, 0.f));
+				break;
+			}
+		}
 
 		// put the camera a short distance from the center, looking towards the triangle
 		///*
@@ -81,7 +100,11 @@ class LSystem_building_app : public app {
 		// attribute_pos (=0) is position of each corner
 		// each corner has 3 floats (x, y, z)
 		// there is no gap between the 3 floats and hence the stride is 3*sizeof(float)
-		l.render(cc.get_matrix());
+		for(int i = 0; i < BUILDING_COUNT; i++)
+		{
+			if(l[i].is_loaded())
+				l[i].render(cc.get_matrix());
+		}
 		if(is_key_down(key_lmb) && !is_left_button_down)
 		{
 			is_left_button_down = true;
@@ -132,7 +155,7 @@ class LSystem_building_app : public app {
 		{
 			cc.rotate_h(-key_rotation_delta);
 		}
-		static float key_translation_delta = .2f;
+		static float key_translation_delta = .4f;
 		if(is_key_down('Q'))
 		{
 			cc.add_view_distance(-key_translation_delta);
@@ -143,6 +166,7 @@ class LSystem_building_app : public app {
 		}
 		if(current_time - key_cool_down > 100)
 		{
+			/*
 			char buf[256];
 			for(int i = 0; i < 10; i++)
 			{
@@ -150,10 +174,11 @@ class LSystem_building_app : public app {
 				if(is_key_down(c))
 				{
 					sprintf(buf, "..\\..\\assets\\%c.txt", c);
-					l.load(buf);
+					l.load(buf, &texture_shader_);
 					key_cool_down = current_time;
 				}
 			}
+			*/
 		}
 	}
 };

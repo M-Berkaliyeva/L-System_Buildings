@@ -62,7 +62,7 @@ namespace octet
 			}
 		};
 
-		texture_shader &texture_shader_;
+		texture_shader *texture_shader_;
 		std::string axiom;
 		std::string output_str;
 		dynarray<vec3> mesh;
@@ -116,7 +116,8 @@ namespace octet
 		float maxWinSize;
 		float frameSize;
 		float balcony_extention;
-		float balcony_height;		
+		float balcony_height;
+		bool loaded;
 		bool is_stochastic;
 		bool balcony;
 		
@@ -238,10 +239,14 @@ namespace octet
 		{
 			current_state.state::state(branch_length);
 			floor_mesh.reset();
-			floor_uvs.reset();
-			state_stack.reset();
+			frame_mesh.reset();
+			balcony_mesh.reset();
 			mesh.reset();
+			balcony_uvs.reset();
+			frame_uvs.reset();
+			floor_uvs.reset();
 			uvs.reset();
+			state_stack.reset();
 			mat4t m;
 			max_point = min_point = vec3(0, 0, 0);
 			current_angle = 0;
@@ -458,14 +463,15 @@ namespace octet
 		}
 
 	public:
-		lsystem(texture_shader &s) : initial_pos(0, 0, 0),
+		lsystem() : initial_pos(0, 0, 0),
 		floor_count(2),
 		wall_height(2),
 		floor_board_thickness(.2f),
 		floor_board_vertex_count(0),
 		centre_of_ground_floor(0),
 		floor_side_index(0),
-		texture_shader_(s)
+		texture_shader_(NULL),
+		loaded(false)
 		{
 			srand((DWORD)time(NULL));
 			m_rotate_x_180.loadIdentity();
@@ -483,6 +489,12 @@ namespace octet
 			balcony_height = .5;
 			vector = vec3(1, 0, 0);
 			extension_length = .3f;
+		}
+
+		// check if the instance has loaded a configuration file
+		bool is_loaded()
+		{
+			return loaded;
 		}
 
 		// get world position
@@ -564,8 +576,9 @@ namespace octet
 		}
 
 		//load rule configuration file from a given path
-		void load(char *path) 	
+		void load(char *path, texture_shader *shader) 	
 		{
+			texture_shader_ = shader;
 			wall_tex = resources::get_texture_handle(GL_RGB, "assets/brick_wall.gif");//"!bricks");
 			frame_tex = resources::get_texture_handle(GL_RGB, "assets/frame.gif");//"#FFFFFFFF");
 			balcony_tex = resources::get_texture_handle(GL_RGB, "assets/balcony.gif");
@@ -581,6 +594,7 @@ namespace octet
 			model_to_world.loadIdentity();
 			if(f)
 			{
+				loaded = true;
 				std::string str;
 				while(!f.eof())
 				{
@@ -623,6 +637,13 @@ namespace octet
 						getline(f, str);
 						sscanf(str.c_str(), "%f", &branch_length_decrement);
 					}
+					else if(str == "world position")
+					{
+						getline(f, str);
+						vec3 v;
+						sscanf(str.c_str(), "%f %f %f", &v.x(), &v.y(), &v.z());
+						set_world_position(v);
+					}
 					else if(str == "iteration")
 					{
 						getline(f, str);
@@ -664,17 +685,21 @@ namespace octet
 						}
 					}
 				}
+				building_height = wall_height * floor_count;
+				generate_output_str();
+				generate_mesh();
 			}
-			building_height = wall_height * floor_count;
-			generate_output_str();
-			generate_mesh();
+			else
+			{
+				loaded = false;
+			}
 		}
 
 		//render both branch mesh
 		void render(const mat4t &camera_to_world)
 		{
 			mat4t modelToProjection = mat4t::build_projection_matrix(model_to_world, camera_to_world);
-			texture_shader_.render(modelToProjection, 0);
+			texture_shader_->render(modelToProjection, 0);
 			glEnableVertexAttribArray(attribute_pos);
 			glEnableVertexAttribArray(attribute_uv);
 
