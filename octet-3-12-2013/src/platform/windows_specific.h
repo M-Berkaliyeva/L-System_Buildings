@@ -107,7 +107,7 @@ namespace octet {
         0, 0, 0                // layer masks ignored  
       };
 
-      HDC hdc = GetDC(window_handle);
+      hdc = GetDC(window_handle);
 
       int pixel_format = ChoosePixelFormat(hdc, &pfd);
 
@@ -117,8 +117,6 @@ namespace octet {
 
       wglMakeCurrent (hdc, gl_context);
 
-      ReleaseDC(window_handle, hdc);
-
       init_wgl();
 
       //printf("%s\n", glGetString(GL_EXTENSIONS));
@@ -126,6 +124,9 @@ namespace octet {
 
     typedef hash_map<HWND, app*, HWND_cmp> map_t;
     static map_t &map() { static map_t instance; return instance; }
+
+  protected:
+	  HDC hdc;
 
   public:
     app(int argc, char **argv) {
@@ -176,7 +177,6 @@ namespace octet {
     }
 
     void render() {
-      HDC hdc = GetDC(window_handle);
       wglMakeCurrent (hdc, gl_context);
 
       RECT rect;
@@ -189,7 +189,6 @@ namespace octet {
       SwapBuffers(hdc);
 
       wglMakeCurrent (hdc, NULL);
-      ReleaseDC(window_handle, hdc);
     }
 
     static unsigned translate(unsigned key) {

@@ -324,7 +324,7 @@ namespace octet
 			extend_floor_polygon();
 
 			//add Balconies
-			float b_size = balcony_points.size();
+			int b_size = balcony_points.size();
 			if(b_size != 0)
 			{
 				vec3 p0 = balcony_points[0];

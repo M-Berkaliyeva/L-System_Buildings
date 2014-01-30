@@ -25,6 +25,8 @@ class LSystem_building_app : public app {
 
 	lsystem l[BUILDING_COUNT];
 
+	font_helper *font;
+
 	camera_control cc;
 
 	bool is_left_button_down;
@@ -45,6 +47,8 @@ class LSystem_building_app : public app {
 
 	// this is called once OpenGL is initialized
 	void app_init() {
+		font = font_helper::get_instance();
+		font->set_font(15,0,0,0,FW_BOLD,0,0,0,GB2312_CHARSET,OUT_STROKE_PRECIS,CLIP_STROKE_PRECIS,DRAFT_QUALITY,VARIABLE_PITCH+FF_MODERN,L"Arial", hdc);
 
 		const float DELTA = 60.f;
 		vec3 initial_pos(-DELTA, 0.f, -DELTA);
@@ -180,6 +184,13 @@ class LSystem_building_app : public app {
 			}
 			*/
 		}
+		const int DELTA = 20;
+		static int w1 = w - 250, h1 = h - 550, w2 = w1 + 205;
+		int i = 0;
+		font->draw_string(1.f, 0, 0, w1 + 185, h1 - i, w, h, "hotkey");
+		i += DELTA;
+		font->draw_string(1.f, 1.f, 1.f, w1, h1 - i, w, h, "wall_height: %.3f", l[4].get_wall_height());
+		font->draw_string(1.f, 1.f, 1.f, w2, h1 - i, w, h, "(f/F)");
 	}
 };
 }
