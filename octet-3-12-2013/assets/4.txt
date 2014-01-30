@@ -11,11 +11,10 @@ angle
 branch length
 2
 iteration
-2
+1
 axiom
-AC
+F
 letters
-AC
+F
 rules
-F+FKF-FKF-FKF+F
-F--FKFA--A(0.80)KF(0.20)KK(1.80)KF(0.80)KA-K-FFA--FA
+FB(0.80)K+FBK-F-F+FBK+FK+FBK+FK+FBK
