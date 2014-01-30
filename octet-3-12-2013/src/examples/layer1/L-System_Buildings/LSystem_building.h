@@ -103,6 +103,7 @@ namespace octet
 		int floor_count;
 		int floor_board_vertex_count;
 		int floor_side_index;
+		int texture_num;
 		int window_count;
 		float centre_of_ground_floor;
 		float angle;
@@ -605,9 +606,10 @@ namespace octet
 		}
 
 		//load rule configuration file from a given path
-		void load(char *path, texture_shader *shader) 	
+		void load_from_file(char *path, texture_shader *shader) 	
 		{
 			texture_shader_ = shader;
+			texture_num = 1;
 			wall_tex = resources::get_texture_handle(GL_RGB, "assets/brick_wall.gif");//"!bricks");
 			frame_tex = resources::get_texture_handle(GL_RGB, "assets/frame.gif");//"#FFFFFFFF");
 			balcony_tex = resources::get_texture_handle(GL_RGB, "assets/balcony.gif");
@@ -678,6 +680,11 @@ namespace octet
 						getline(f, str);
 						sscanf(str.c_str(), "%d", &iteration);
 					}
+					else if(str == "texture")
+					{
+						getline(f, str);
+						sscanf(str.c_str(), "%d", &texture_num);
+					}
 					else if(str == "axiom")
 					{
 						getline(f, str);
@@ -715,7 +722,7 @@ namespace octet
 					}
 				}
 				building_height = wall_height * floor_count;
-				generate_output_str();
+				generate_output_str();				
 				generate_mesh();
 			}
 			else
@@ -760,6 +767,8 @@ namespace octet
 			if(iteration != 0)
 			{
 				iteration--;
+				generate_output_str();				
+				generate_mesh();
 			}
 		}
 
@@ -767,6 +776,8 @@ namespace octet
 		void increase_iteration()
 		{
 			iteration++;
+			generate_output_str();				
+			generate_mesh();
 		}
 
 		//adjust branch length decrement
@@ -778,14 +789,24 @@ namespace octet
 		//adjust inital branch length
 		void adjust_inital_branch_length(float f)
 		{
-			branch_length += f;
+			if(branch_length + f > 1.5f)
+			{
+				branch_length += f;			
+				generate_output_str();				
+				generate_mesh();
+			}
 		}
 
 		//adjust angle for each turn
 		void adjust_angle(float f)
 		{
-			angle += f;
-			set_angle(angle);
+			if(angle + f > 5.0f && angle + f < 50.0f)
+			{
+				angle += f;
+				set_angle(angle);
+				generate_output_str();				
+				generate_mesh();
+			}
 		}
 
 		~lsystem()

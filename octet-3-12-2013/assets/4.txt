@@ -13,8 +13,9 @@ branch length
 iteration
 1
 axiom
-F
+C
 letters
-F
+AC
 rules
-FB(0.80)K+FBK-F-F+FBK+FK+FBK+FK+FBK
+FBKFKA
+F++A--A++F++A--A++F++A--A++F++A--A

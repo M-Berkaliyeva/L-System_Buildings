@@ -5,7 +5,7 @@ class LSystem_building_app : public app {
 	mat4t modelToWorld;
 
 	unsigned int key_cool_down;
-
+	unsigned int current_time;
 	// Matrix to transform points in our camera space to the world.
 
 	// texture shader
@@ -17,10 +17,17 @@ class LSystem_building_app : public app {
 	int mouse_x;
 	int mouse_y;
 	int mouse_wheel;
+	int iterations;
+	float angle;
 
 	enum
 	{
-		BUILDING_COUNT = 9
+		BUILDING_COUNT = 9		
+	};
+
+	enum
+	{
+		BUILDING_INDEX_TO_MODIFY = 4
 	};
 
 	lsystem l[BUILDING_COUNT];
@@ -56,7 +63,7 @@ class LSystem_building_app : public app {
 		{
 			char buf[256];
 			sprintf(buf, "..\\..\\assets\\%d.txt", i);
-			l[i].load(buf, &texture_shader_);
+			l[i].load_from_file(buf, &texture_shader_);
 			l[i].set_world_position(initial_pos + vec3(i % 3 * DELTA, 0.f, i / 3 * DELTA));
 		}
 		// initialize the shader
@@ -83,32 +90,11 @@ class LSystem_building_app : public app {
 		//*/
 	}
 
-	// this is called to draw the world
-	void draw_world(int x, int y, int w, int h) {
-		unsigned int current_time = GetTickCount();
-		// set a viewport - includes whole window area
-		glViewport(x, y, w, h);
-
-		// clear the background to black
-		glClearColor(0, 0, 0, 1);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		// allow Z buffer depth testing (closer objects are always drawn in front of far ones)
-		glEnable(GL_DEPTH_TEST);
-
-		vec4 color(0, 1, 0, 1);
-
-		//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
-
-		// attribute_pos (=0) is position of each corner
-		// each corner has 3 floats (x, y, z)
-		// there is no gap between the 3 floats and hence the stride is 3*sizeof(float)
-		for(int i = 0; i < BUILDING_COUNT; i++)
-		{
-			if(l[i].is_loaded())
-				l[i].render(cc.get_matrix());
-		}
+	/**********************************************************************
+		Method that reads the keyboard and mouse inputs		
+	***********************************************************************/
+	void hotkeys()
+	{
 		if(is_key_down(key_lmb) && !is_left_button_down)
 		{
 			is_left_button_down = true;
@@ -168,6 +154,78 @@ class LSystem_building_app : public app {
 		{
 			cc.add_view_distance(key_translation_delta);
 		}
+		//timer count for keyboard 
+		if (current_time - key_cool_down > 100)
+		{
+			//control iterations 
+			if (is_key_down(key_up))
+			{
+				if(l[BUILDING_INDEX_TO_MODIFY].get_iteration()<5)//do not make more than 3 iterations -> run out of memory
+					l[BUILDING_INDEX_TO_MODIFY].increase_iteration();
+
+				key_cool_down = current_time;
+			} 
+			if (is_key_down(key_down )) 
+			{
+				l[BUILDING_INDEX_TO_MODIFY].decrease_iteration();
+				key_cool_down = current_time;
+			}
+			//control branch length
+			if (is_key_down(key_right))//increase
+			{
+				float branch_length = 0.5f;
+				l[BUILDING_INDEX_TO_MODIFY].adjust_inital_branch_length(branch_length);
+				key_cool_down = current_time;
+			} 				
+			if (is_key_down(key_left)) //decrease
+			{
+				float branch_length = -0.5f;
+				l[BUILDING_INDEX_TO_MODIFY].adjust_inital_branch_length(branch_length);
+				key_cool_down = current_time;
+			}
+			//control building angle
+			if(is_key_down('P'))//increase
+			{
+				float angle_b = 5.0f;
+				l[BUILDING_INDEX_TO_MODIFY].adjust_angle(angle_b);
+				key_cool_down = current_time;
+			}
+			if(is_key_down('O'))//decrease
+			{
+				float angle_b = -5.0f;
+				l[BUILDING_INDEX_TO_MODIFY].adjust_angle(angle_b);
+				key_cool_down = current_time;
+			}
+		}
+	}
+
+	// this is called to draw the world
+	void draw_world(int x, int y, int w, int h) {
+		current_time = GetTickCount();
+		// set a viewport - includes whole window area
+		glViewport(x, y, w, h);
+
+		// clear the background to black
+		glClearColor(0, 0, 0, 1);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		// allow Z buffer depth testing (closer objects are always drawn in front of far ones)
+		glEnable(GL_DEPTH_TEST);
+
+		vec4 color(0, 1, 0, 1);
+
+		//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+
+		// attribute_pos (=0) is position of each corner
+		// each corner has 3 floats (x, y, z)
+		// there is no gap between the 3 floats and hence the stride is 3*sizeof(float)
+		for(int i = 0; i < BUILDING_COUNT; i++)
+		{
+			if(l[i].is_loaded())
+				l[i].render(cc.get_matrix());
+		}
+		hotkeys();
 		if(current_time - key_cool_down > 100)
 		{
 			/*
