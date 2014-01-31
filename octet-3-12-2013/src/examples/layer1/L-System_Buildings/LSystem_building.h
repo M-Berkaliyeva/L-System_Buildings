@@ -107,7 +107,6 @@ namespace octet
 		int window_count;
 		float centre_of_ground_floor;
 		float angle;
-		float current_angle;
 		float branch_length;
 		float branch_length_decrement;
 		float floor_board_thickness;
@@ -255,7 +254,6 @@ namespace octet
 			state_stack.reset();
 			mat4t m;
 			max_point = min_point = vec3(0, 0, 0);
-			current_angle = 0;
 			for(unsigned int i = 0; i < output_str.size(); i++)
 			{
 				std::string float_str = "";
@@ -297,33 +295,39 @@ namespace octet
 					break;
 				case '+':
 					current_state.m = current_state.m * m_rotate_y_positive;
-					current_angle += angle;
 					break;
 				case '-':
 					current_state.m = current_state.m * m_rotate_y_negative;
-					current_angle -= angle;
 					break;
 				}
 			}
-			//if the absolute value of current_angle is over 360, it means the building is already enclosed
-			if(abs(current_angle) < 360.f)
-			{
-				enclose();
-			}
+			enclose();
 			
 			
 
 			floor_board_vertex_count = floor_mesh.size();
 			//remove those leading three vertices to be colinear
-			for(int i = 0; i < floor_board_vertex_count - 2; i++)
+			floor_mesh.resize(floor_mesh.size() + 2);
+			floor_mesh[floor_board_vertex_count] = floor_mesh[0];
+			floor_mesh[floor_board_vertex_count + 1] = floor_mesh[1];
+			for(int i = 0; i < floor_board_vertex_count - 1; i++)
 			{
 				if(abs(dot(normalize(floor_mesh[i] - floor_mesh[i + 1]), normalize(floor_mesh[i + 2] - floor_mesh[i + 1]))) > .999f)
 				{
 					floor_mesh.erase(i + 1);
-					i = -1;
+					i--;
 					floor_board_vertex_count--;
 				}
 			}
+			if(floor_board_vertex_count < 3)
+				return;
+			if(floor_board_vertex_count > 2 && abs(dot(normalize(floor_mesh[floor_board_vertex_count - 1] - floor_mesh[floor_board_vertex_count - 2]), normalize(floor_mesh[floor_board_vertex_count - 2] - floor_mesh[floor_board_vertex_count - 3]))) > .999f)
+			{
+				floor_mesh.erase(0);
+				floor_board_vertex_count--;
+			}
+			floor_mesh.pop_back();
+			floor_mesh.pop_back();
 			if(floor_board_vertex_count < 3)
 				return;
 
@@ -423,6 +427,15 @@ namespace octet
 			floor_mesh.resize(floor_board_vertex_count + 2);
 			floor_mesh[floor_board_vertex_count] = floor_mesh[0];
 			floor_mesh[floor_board_vertex_count + 1] = floor_mesh[1];
+			if(floor_board_vertex_count == 13)
+			{
+				vec3 v1 = floor_mesh[11] - floor_mesh[12];
+				vec3 v2 = floor_mesh[13] - floor_mesh[12];
+				v1 = v1.normalize();
+				v2 = v2.normalize();
+				if(abs(dot(v1, v2)) > .999f)
+					v1 = v1;
+			}
 			for(int i = 0; i < floor_board_vertex_count; i++)
 			{
 				int index1 = i + 1;
@@ -431,6 +444,8 @@ namespace octet
 				vec3 v2 = floor_mesh[i + 2] - floor_mesh[index1];
 				v1 = v1.normalize();
 				v2 = v2.normalize();
+				if(abs(dot(v1, v2)) > .999f)
+					v1 = v1;
 				//get new point position after extension
 				vec3 upright(v1.z(), 0.f, -v1.x());
 				vec3 v3 = (v1 - v2).normalize();
@@ -1003,6 +1018,8 @@ namespace octet
 		//enclose the wall
 		void enclose()
 		{
+			if((current_state.pos - initial_pos).length() < .01f)
+				return;
 			vec3 vector_h(1, 0, 0), vector_v(0.f, wall_height, 0.f);
 			vec3 p0 = current_state.pos;
 			vec3 p1 = current_state.pos + vector_v;
