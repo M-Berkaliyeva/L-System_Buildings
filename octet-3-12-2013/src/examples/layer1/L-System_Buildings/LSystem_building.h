@@ -241,6 +241,7 @@ namespace octet
 		//generate one mesh for branchs and the other mesh for leaves according to the output string
 		void generate_mesh()
 		{
+			vector = vec3(1, 0, 0);
 			current_state.state::state(branch_length);
 			floor_mesh.reset();
 			frame_mesh.reset();
@@ -427,15 +428,6 @@ namespace octet
 			floor_mesh.resize(floor_board_vertex_count + 2);
 			floor_mesh[floor_board_vertex_count] = floor_mesh[0];
 			floor_mesh[floor_board_vertex_count + 1] = floor_mesh[1];
-			if(floor_board_vertex_count == 13)
-			{
-				vec3 v1 = floor_mesh[11] - floor_mesh[12];
-				vec3 v2 = floor_mesh[13] - floor_mesh[12];
-				v1 = v1.normalize();
-				v2 = v2.normalize();
-				if(abs(dot(v1, v2)) > .999f)
-					v1 = v1;
-			}
 			for(int i = 0; i < floor_board_vertex_count; i++)
 			{
 				int index1 = i + 1;
@@ -444,8 +436,6 @@ namespace octet
 				vec3 v2 = floor_mesh[i + 2] - floor_mesh[index1];
 				v1 = v1.normalize();
 				v2 = v2.normalize();
-				if(abs(dot(v1, v2)) > .999f)
-					v1 = v1;
 				//get new point position after extension
 				vec3 upright(v1.z(), 0.f, -v1.x());
 				vec3 v3 = (v1 - v2).normalize();

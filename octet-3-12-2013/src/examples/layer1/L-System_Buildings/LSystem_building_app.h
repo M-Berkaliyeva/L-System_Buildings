@@ -10,7 +10,7 @@ class LSystem_building_app : public app {
 
 	// texture shader
 	texture_shader texture_shader_;
-	
+
 	dynarray <GLuint> wall_tex_list;
 	dynarray <GLuint> floor_tex_list;
 	dynarray <GLuint> frame_tex_list;
@@ -96,8 +96,8 @@ class LSystem_building_app : public app {
 	}
 
 	/**********************************************************************
-		Method that reads the keyboard and mouse inputs		
-	***********************************************************************/
+	  Method that reads the keyboard and mouse inputs		
+	 ***********************************************************************/
 	void hotkeys()
 	{
 		if(is_key_down(key_lmb) && !is_left_button_down)
@@ -163,14 +163,14 @@ class LSystem_building_app : public app {
 		if (current_time - key_cool_down > 100)
 		{
 			//control iterations 
-			if (is_key_down(key_up))
+			if (is_key_down(key_up))//increase
 			{
 				if(l[BUILDING_INDEX_TO_MODIFY].get_iteration()<5)//do not make more than 3 iterations -> run out of memory
 					l[BUILDING_INDEX_TO_MODIFY].increase_iteration();
 
 				key_cool_down = current_time;
 			} 
-			if (is_key_down(key_down )) 
+			if (is_key_down(key_down)) //decrease
 			{
 				l[BUILDING_INDEX_TO_MODIFY].decrease_iteration();
 				key_cool_down = current_time;
@@ -189,110 +189,134 @@ class LSystem_building_app : public app {
 				key_cool_down = current_time;
 			}
 			//control branch length
-			if (is_key_down('P'))// && is_key_down(key_shift))//increase
+			if (is_key_down('P'))//increase
 			{
-				float branch_length = 0.5f;
-				l[BUILDING_INDEX_TO_MODIFY].adjust_inital_branch_length(branch_length);
-				key_cool_down = current_time;
+				if (!is_key_down(key_shift))
+				{
+					float branch_length = 0.5f;
+					l[BUILDING_INDEX_TO_MODIFY].adjust_inital_branch_length(branch_length);
+					key_cool_down = current_time;
+				}
+				else//decrease
+				{
+					float branch_length = -0.5f;
+					l[BUILDING_INDEX_TO_MODIFY].adjust_inital_branch_length(branch_length);
+					key_cool_down = current_time;
+				}
 			} 				
-			if (is_key_down('O')) //decrease
-			{
-				float branch_length = -0.5f;
-				l[BUILDING_INDEX_TO_MODIFY].adjust_inital_branch_length(branch_length);
-				key_cool_down = current_time;
-			}
 			//control wall height
-			if(is_key_down('I'))// && is_key_down(key_shift))//increase
+			if(is_key_down('H'))//increase
 			{
-				float wall_height = 0.5f;
-				l[BUILDING_INDEX_TO_MODIFY].adjust_wall_height(wall_height);
-				key_cool_down = current_time;
+				if(!is_key_down(key_shift))
+				{
+					float wall_height = 0.5f;
+					l[BUILDING_INDEX_TO_MODIFY].adjust_wall_height(wall_height);
+					key_cool_down = current_time;
+				}
+				else//decrease
+				{
+					float wall_height = -0.5f;
+					l[BUILDING_INDEX_TO_MODIFY].adjust_wall_height(wall_height);
+					key_cool_down = current_time;
+				}	
 			}
-			if(is_key_down('U'))//decrease
-			{
-				float wall_height = -0.5f;
-				l[BUILDING_INDEX_TO_MODIFY].adjust_wall_height(wall_height);
-				key_cool_down = current_time;
-			}	
 
 			//control window size
 			if(is_key_down('M'))//increase
 			{
-				float winS = 0.1f;
-				l[BUILDING_INDEX_TO_MODIFY].adjust_winSize(winS);
-				key_cool_down = current_time;
+				if(!is_key_down('M'))//decrease
+				{
+					float winS = 0.1f;
+					l[BUILDING_INDEX_TO_MODIFY].adjust_winSize(winS);
+					key_cool_down = current_time;
+				}
+				else//decrease
+				{
+					float winS = -0.1f;
+					l[BUILDING_INDEX_TO_MODIFY].adjust_winSize(winS);
+					key_cool_down = current_time;
+				}	
 			}
-			if(is_key_down('N'))//decrease
-			{
-				float winS = -0.1f;
-				l[BUILDING_INDEX_TO_MODIFY].adjust_winSize(winS);
-				key_cool_down = current_time;
-			}	
 
 			//control floor count
-			if(is_key_down('L'))// && is_key_down(key_shift))//increase
+			if(is_key_down('L'))//increase
 			{
-				l[BUILDING_INDEX_TO_MODIFY].increase_floor_count();
-				key_cool_down = current_time;
-			}
-			if(is_key_down('K'))//decrease
-			{
-				l[BUILDING_INDEX_TO_MODIFY].decrease_floor_count();
-				key_cool_down = current_time;
+				if(!is_key_down(key_shift))
+				{
+					l[BUILDING_INDEX_TO_MODIFY].increase_floor_count();
+					key_cool_down = current_time;
+				}
+				else//decrease
+				{
+					l[BUILDING_INDEX_TO_MODIFY].decrease_floor_count();
+					key_cool_down = current_time;
+				}
 			}
 
 			//extension_length
-			if(is_key_down('X'))// && is_key_down(key_shift))//increase
+			if(is_key_down('X'))//increase
 			{
-				float ext = 0.05f;
-				l[BUILDING_INDEX_TO_MODIFY].adjust_extension_length(ext);
-				key_cool_down = current_time;
-			}
-			if(is_key_down('Z'))//decrease
-			{
-				float ext = -0.05f;
-				l[BUILDING_INDEX_TO_MODIFY].adjust_extension_length(ext);
-				key_cool_down = current_time;
+				if(!is_key_down(key_shift))
+				{
+					float ext = 0.05f;
+					l[BUILDING_INDEX_TO_MODIFY].adjust_extension_length(ext);
+					key_cool_down = current_time;
+				}
+				else//decrease
+				{
+					float ext = -0.05f;
+					l[BUILDING_INDEX_TO_MODIFY].adjust_extension_length(ext);
+					key_cool_down = current_time;
+				}
 			}
 
 			//floor_board_thickness
-			if(is_key_down('V'))// && is_key_down(key_shift))//increase
+			if(is_key_down('I'))//increase
 			{
-				float b_th = 0.05f;
-				l[BUILDING_INDEX_TO_MODIFY].adjust_floor_board_thickness(b_th);
-				key_cool_down = current_time;
-			}
-			if(is_key_down('C'))//decrease
-			{
-				float b_th = -0.05f;
-				l[BUILDING_INDEX_TO_MODIFY].adjust_floor_board_thickness(b_th);
-				key_cool_down = current_time;
+				if(!is_key_down(key_shift))
+				{
+					float b_th = 0.05f;
+					l[BUILDING_INDEX_TO_MODIFY].adjust_floor_board_thickness(b_th);
+					key_cool_down = current_time;
+				}
+				else//decrease
+				{
+					float b_th = -0.05f;
+					l[BUILDING_INDEX_TO_MODIFY].adjust_floor_board_thickness(b_th);
+					key_cool_down = current_time;
+				}
 			}
 			//balcony_extention
-			if(is_key_down('G'))// && is_key_down(key_shift))//increase
+			if(is_key_down('O'))//increase
 			{
-				float b = 0.05f;
-				l[BUILDING_INDEX_TO_MODIFY].adjust_balcony_extention(b);
-				key_cool_down = current_time;
-			}
-			if(is_key_down('F'))//decrease
-			{
-				float b = -0.05f;
-				l[BUILDING_INDEX_TO_MODIFY].adjust_balcony_extention(b);
-				key_cool_down = current_time;
+				if(!is_key_down(key_shift))
+				{
+					float b = 0.05f;
+					l[BUILDING_INDEX_TO_MODIFY].adjust_balcony_extention(b);
+					key_cool_down = current_time;
+				}
+				else//decrease
+				{
+					float b = -0.05f;
+					l[BUILDING_INDEX_TO_MODIFY].adjust_balcony_extention(b);
+					key_cool_down = current_time;
+				}
 			}
 			//balcony_heigh
-			if(is_key_down('J'))// && is_key_down(key_shift))//increase
+			if(is_key_down('J'))//increase
 			{
-				float b = 0.05f;
-				l[BUILDING_INDEX_TO_MODIFY].adjust_balcony_height(b);
-				key_cool_down = current_time;
-			}
-			if(is_key_down('H'))//decrease
-			{
-				float b = -0.05f;
-				l[BUILDING_INDEX_TO_MODIFY].adjust_balcony_height(b);
-				key_cool_down = current_time;
+				if(!is_key_down(key_shift))
+				{
+					float b = 0.05f;
+					l[BUILDING_INDEX_TO_MODIFY].adjust_balcony_height(b);
+					key_cool_down = current_time;
+				}
+				else//decrease
+				{
+					float b = -0.05f;
+					l[BUILDING_INDEX_TO_MODIFY].adjust_balcony_height(b);
+					key_cool_down = current_time;
+				}
 			}
 
 			//next texture
@@ -385,7 +409,8 @@ class LSystem_building_app : public app {
 		const int DELTA = 20;
 		static int w1 = w - 320, h1 = h - 500, w2 = w1 + 215;
 		int i = 0;
-		font->draw_string(1.f, 1.f, 1.f, w1 + 185, h1 - i, w, h, "hotkey");
+		font->draw_string(1.f, 1.f, 1.f, 10, 10, w, h, "hotkehotkehotkehotkehotkeyyyyyhotkey");
+		font->draw_string(1.f, 1.f, 1.f, w1 + 225, h1 - i, w, h, "hotkey");
 		i += DELTA;
 		font->draw_string(1.f, 1.f, 1.f, w1, h1 - i, w, h, "iteration: %.3f", (float)l[BUILDING_INDEX_TO_MODIFY].get_iteration());
 		font->draw_string(1.f, 1.f, 1.f, w2, h1 - i, w, h, "(down/up)");
@@ -394,27 +419,27 @@ class LSystem_building_app : public app {
 		font->draw_string(1.f, 1.f, 1.f, w2, h1 - i, w, h, "(left/right)");
 		i += DELTA;
 		font->draw_string(1.f, 1.f, 1.f, w1, h1 - i, w, h, "floor_count: %.3f", (float)l[BUILDING_INDEX_TO_MODIFY].get_floor_count());
-		font->draw_string(1.f, 1.f, 1.f, w2, h1 - i, w, h, "(k/l)");		
+		font->draw_string(1.f, 1.f, 1.f, w2, h1 - i, w, h, "(l/L)");		
 		i += DELTA;		
 		font->draw_string(1.f, 1.f, 1.f, w1, h1 - i, w, h, "wall_height: %.3f", l[BUILDING_INDEX_TO_MODIFY].get_wall_height());
-		font->draw_string(1.f, 1.f, 1.f, w2, h1 - i, w, h, "(u/i)");
+		font->draw_string(1.f, 1.f, 1.f, w2, h1 - i, w, h, "(h/H)");
 		i += DELTA;
 		font->draw_string(1.f, 1.f, 1.f, w1, h1 - i, w, h, "wall_length: %.3f", l[BUILDING_INDEX_TO_MODIFY].get_inital_branch_length());
-		font->draw_string(1.f, 1.f, 1.f, w2, h1 - i, w, h, "(o/p)");
+		font->draw_string(1.f, 1.f, 1.f, w2, h1 - i, w, h, "(p/P)");
 		i += DELTA;
 		font->draw_string(1.f, 1.f, 1.f, w1, h1 - i, w, h, "balcony_height: %.3f", l[BUILDING_INDEX_TO_MODIFY].get_balcony_height());
-		font->draw_string(1.f, 1.f, 1.f, w2, h1 - i, w, h, "(h/j)");
+		font->draw_string(1.f, 1.f, 1.f, w2, h1 - i, w, h, "(j/J)");
 		i += DELTA;
 		font->draw_string(1.f, 1.f, 1.f, w1, h1 - i, w, h, "balcony_extention: %.3f", l[BUILDING_INDEX_TO_MODIFY].get_balcony_extension());
-		font->draw_string(1.f, 1.f, 1.f, w2, h1 - i, w, h, "(f/g)");
+		font->draw_string(1.f, 1.f, 1.f, w2, h1 - i, w, h, "(o/O)");
 		i += DELTA;
 		font->draw_string(1.f, 1.f, 1.f, w1, h1 - i, w, h, "floor_thickness: %.3f", l[BUILDING_INDEX_TO_MODIFY].get_floor_board_thickness());
-		font->draw_string(1.f, 1.f, 1.f, w2, h1 - i, w, h, "(c/v)");
+		font->draw_string(1.f, 1.f, 1.f, w2, h1 - i, w, h, "(i/I)");
 		i += DELTA;
 		font->draw_string(1.f, 1.f, 1.f, w1, h1 - i, w, h, "extension_length: %.3f", l[BUILDING_INDEX_TO_MODIFY].get_extension_length());
-		font->draw_string(1.f, 1.f, 1.f, w2, h1 - i, w, h, "(z/x)");
+		font->draw_string(1.f, 1.f, 1.f, w2, h1 - i, w, h, "(x/X)");
 		i += DELTA;
-		font->draw_string(1.f, 1.f, 1.f, w1, h1 - i, w, h, "texture: %.3f", (float)l[BUILDING_INDEX_TO_MODIFY].get_texture_index());
+		font->draw_string(1.f, 1.f, 1.f, w1, h1 - i, w, h, "texture: %d", l[BUILDING_INDEX_TO_MODIFY].get_texture_index());
 		font->draw_string(1.f, 1.f, 1.f, w2, h1 - i, w, h, "(t)");
 		i += DELTA;
 		font->draw_string(1.f, 1.f, 1.f, w1, h1 - i, w, h, "randomize");
