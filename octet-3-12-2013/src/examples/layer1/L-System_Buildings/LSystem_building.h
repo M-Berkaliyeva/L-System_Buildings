@@ -387,7 +387,7 @@ namespace octet
 			int index1;
 			//make it possible for the loop to reach to segment between the starting point and the end point
 			floor_mesh[floor_board_vertex_count] = floor_mesh[0];
-			floor_uvs[floor_board_vertex_count] = vec2((floor_uvs[floor_board_vertex_count - 1] - floor_uvs[0]).length(), 0);
+			floor_uvs[floor_board_vertex_count] = vec2((floor_mesh[floor_board_vertex_count - 1] - floor_mesh[0]).length() + floor_uvs[floor_board_vertex_count - 1].x(), 0);
 			//
 			for(int j = 0; j < floor_board_vertex_count; j++)
 			{
