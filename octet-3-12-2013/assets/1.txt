@@ -9,15 +9,14 @@ floor count
 angle
 45
 branch length
-2
+6
 iteration
 2
 texture
 1
 axiom
-AC
+A
 letters
-AC
+A
 rules
-F+FBKF-FBKF-FBKF+F
-F--FKFA--A(0.80)KF(0.50)KK(1.50)KF(0.80)KA-K-FFA--FA
+F(1.50)BK+FK+FK+FK+FK+FK+FK+FK

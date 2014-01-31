@@ -24,6 +24,7 @@ class LSystem_building_app : public app {
 	int mouse_wheel;
 	int iterations;
 	float angle;
+	float view_distance_delta;
 
 	enum
 	{
@@ -53,15 +54,13 @@ class LSystem_building_app : public app {
 	mouse_x(0),
 	mouse_y(0),
 	mouse_wheel(0),
-	is_left_button_down(false)
+	is_left_button_down(false),
+	view_distance_delta(.8f)
 	{
 	}
 
-	// this is called once OpenGL is initialized
-	void app_init() {
-		font = font_helper::get_instance();
-		font->set_font(15,0,0,0,FW_BOLD,0,0,0,GB2312_CHARSET,OUT_STROKE_PRECIS,CLIP_STROKE_PRECIS,DRAFT_QUALITY,VARIABLE_PITCH+FF_MODERN,L"Arial", hdc);
-
+	void reload()
+	{
 		const float DELTA = 60.f;
 		vec3 initial_pos(-DELTA, 0.f, -DELTA);
 		for(int i = 0; i < BUILDING_COUNT; i++)
@@ -71,6 +70,14 @@ class LSystem_building_app : public app {
 			l[i].load_from_file(buf, &texture_shader_);
 			l[i].set_world_position(initial_pos + vec3(i % 3 * DELTA, 0.f, i / 3 * DELTA));
 		}
+	}
+
+	// this is called once OpenGL is initialized
+	void app_init() {
+		font = font_helper::get_instance();
+		font->set_font(15,0,0,0,FW_BOLD,0,0,0,GB2312_CHARSET,OUT_STROKE_PRECIS,CLIP_STROKE_PRECIS,DRAFT_QUALITY,VARIABLE_PITCH+FF_MODERN,L"Arial", hdc);
+
+		reload();
 		// initialize the shader
 		texture_shader_.init();
 		loadTextures();
@@ -100,6 +107,11 @@ class LSystem_building_app : public app {
 	 ***********************************************************************/
 	void hotkeys()
 	{
+		if(is_key_down('B'))
+		{
+			reload();
+			key_cool_down = current_time;
+		}
 		if(is_key_down(key_lmb) && !is_left_button_down)
 		{
 			is_left_button_down = true;
@@ -150,14 +162,26 @@ class LSystem_building_app : public app {
 		{
 			cc.rotate_h(-key_rotation_delta);
 		}
-		static float key_translation_delta = .4f;
+		if(is_key_down('K'))
+		{
+			if(is_key_down(key_shift))
+			{
+				view_distance_delta -= .1f;
+				if(view_distance_delta < 0)
+					view_distance_delta = 0;
+			}
+			else
+			{
+				view_distance_delta += .1f;
+			}
+		}
 		if(is_key_down('Q'))
 		{
-			cc.add_view_distance(-key_translation_delta);
+			cc.add_view_distance(-view_distance_delta);
 		}
 		if(is_key_down('E'))
 		{
-			cc.add_view_distance(key_translation_delta);
+			cc.add_view_distance(view_distance_delta);
 		}
 		//timer count for keyboard 
 		if (current_time - key_cool_down > 100)
@@ -224,7 +248,7 @@ class LSystem_building_app : public app {
 			//control window size
 			if(is_key_down('M'))//increase
 			{
-				if(!is_key_down('M'))//decrease
+				if(!is_key_down(key_shift))//decrease
 				{
 					float winS = 0.1f;
 					l[BUILDING_INDEX_TO_MODIFY].adjust_winSize(winS);
