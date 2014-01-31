@@ -5,19 +5,18 @@ extension length
 wall height
 2
 floor count
-15
+20
 angle
-45
+90
 branch length
 2
 iteration
-2
+1
 texture
 2
 axiom
-AC
+F
 letters
-AC
+F
 rules
-F+FBKF-FBKF-FBKF+F
-F--FKFA--A(0.80)KF(0.20)KK(1.80)KF(0.80)KA-K-FFA--FA
+FBKFKFBK+FBK+FBKF-FBK+F+FKFK
