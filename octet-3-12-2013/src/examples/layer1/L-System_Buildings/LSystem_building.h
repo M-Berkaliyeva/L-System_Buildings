@@ -534,6 +534,12 @@ namespace octet
 			extension_length = .3f;
 		}
 
+		//get final string
+		std::string get_string()
+		{
+			return output_str;
+		}
+
 		// check if the instance has loaded a configuration file
 		bool is_loaded()
 		{
