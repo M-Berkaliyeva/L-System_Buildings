@@ -12,6 +12,8 @@ branch length
 2
 iteration
 2
+texture
+4
 axiom
 AC
 letters

@@ -10,6 +10,11 @@ class LSystem_building_app : public app {
 
 	// texture shader
 	texture_shader texture_shader_;
+	
+	dynarray <GLuint> wall_tex_list;
+	dynarray <GLuint> floor_tex_list;
+	dynarray <GLuint> frame_tex_list;
+	dynarray <GLuint> balcony_tex_list;
 
 	float rotate_h;
 	float rotate_v;
@@ -68,7 +73,7 @@ class LSystem_building_app : public app {
 		}
 		// initialize the shader
 		texture_shader_.init();
-
+		loadTextures();
 		// set camera control info
 		cc.set_view_distance(40);
 		for(int i = 0; i < BUILDING_COUNT; i++)
@@ -170,33 +175,165 @@ class LSystem_building_app : public app {
 				l[BUILDING_INDEX_TO_MODIFY].decrease_iteration();
 				key_cool_down = current_time;
 			}
-			//control branch length
-			if (is_key_down(key_right))//increase
-			{
-				float branch_length = 0.5f;
-				l[BUILDING_INDEX_TO_MODIFY].adjust_inital_branch_length(branch_length);
-				key_cool_down = current_time;
-			} 				
-			if (is_key_down(key_left)) //decrease
-			{
-				float branch_length = -0.5f;
-				l[BUILDING_INDEX_TO_MODIFY].adjust_inital_branch_length(branch_length);
-				key_cool_down = current_time;
-			}
 			//control building angle
-			if(is_key_down('P'))//increase
+			if(is_key_down(key_right))//increase
 			{
 				float angle_b = 5.0f;
 				l[BUILDING_INDEX_TO_MODIFY].adjust_angle(angle_b);
 				key_cool_down = current_time;
 			}
-			if(is_key_down('O'))//decrease
+			if(is_key_down(key_left))//decrease
 			{
 				float angle_b = -5.0f;
 				l[BUILDING_INDEX_TO_MODIFY].adjust_angle(angle_b);
 				key_cool_down = current_time;
 			}
+			//control branch length
+			if (is_key_down('P'))// && is_key_down(key_shift))//increase
+			{
+				float branch_length = 0.5f;
+				l[BUILDING_INDEX_TO_MODIFY].adjust_inital_branch_length(branch_length);
+				key_cool_down = current_time;
+			} 				
+			if (is_key_down('O')) //decrease
+			{
+				float branch_length = -0.5f;
+				l[BUILDING_INDEX_TO_MODIFY].adjust_inital_branch_length(branch_length);
+				key_cool_down = current_time;
+			}
+			//control wall height
+			if(is_key_down('I'))// && is_key_down(key_shift))//increase
+			{
+				float wall_height = 0.5f;
+				l[BUILDING_INDEX_TO_MODIFY].adjust_wall_height(wall_height);
+				key_cool_down = current_time;
+			}
+			if(is_key_down('U'))//decrease
+			{
+				float wall_height = -0.5f;
+				l[BUILDING_INDEX_TO_MODIFY].adjust_wall_height(wall_height);
+				key_cool_down = current_time;
+			}	
+
+			//control window size
+			if(is_key_down('M'))//increase
+			{
+				float winS = 0.1f;
+				l[BUILDING_INDEX_TO_MODIFY].adjust_winSize(winS);
+				key_cool_down = current_time;
+			}
+			if(is_key_down('N'))//decrease
+			{
+				float winS = -0.1f;
+				l[BUILDING_INDEX_TO_MODIFY].adjust_winSize(winS);
+				key_cool_down = current_time;
+			}	
+
+			//control floor count
+			if(is_key_down('L'))// && is_key_down(key_shift))//increase
+			{
+				l[BUILDING_INDEX_TO_MODIFY].increase_floor_count();
+				key_cool_down = current_time;
+			}
+			if(is_key_down('K'))//decrease
+			{
+				l[BUILDING_INDEX_TO_MODIFY].decrease_floor_count();
+				key_cool_down = current_time;
+			}
+
+			//extension_length
+			if(is_key_down('X'))// && is_key_down(key_shift))//increase
+			{
+				float ext = 0.05f;
+				l[BUILDING_INDEX_TO_MODIFY].adjust_extension_length(ext);
+				key_cool_down = current_time;
+			}
+			if(is_key_down('Z'))//decrease
+			{
+				float ext = -0.05f;
+				l[BUILDING_INDEX_TO_MODIFY].adjust_extension_length(ext);
+				key_cool_down = current_time;
+			}
+
+			//floor_board_thickness
+			if(is_key_down('V'))// && is_key_down(key_shift))//increase
+			{
+				float b_th = 0.05f;
+				l[BUILDING_INDEX_TO_MODIFY].adjust_floor_board_thickness(b_th);
+				key_cool_down = current_time;
+			}
+			if(is_key_down('C'))//decrease
+			{
+				float b_th = -0.05f;
+				l[BUILDING_INDEX_TO_MODIFY].adjust_floor_board_thickness(b_th);
+				key_cool_down = current_time;
+			}
+			//balcony_extention
+			if(is_key_down('G'))// && is_key_down(key_shift))//increase
+			{
+				float b = 0.05f;
+				l[BUILDING_INDEX_TO_MODIFY].adjust_balcony_extention(b);
+				key_cool_down = current_time;
+			}
+			if(is_key_down('F'))//decrease
+			{
+				float b = -0.05f;
+				l[BUILDING_INDEX_TO_MODIFY].adjust_balcony_extention(b);
+				key_cool_down = current_time;
+			}
+			//balcony_heigh
+			if(is_key_down('J'))// && is_key_down(key_shift))//increase
+			{
+				float b = 0.05f;
+				l[BUILDING_INDEX_TO_MODIFY].adjust_balcony_height(b);
+				key_cool_down = current_time;
+			}
+			if(is_key_down('H'))//decrease
+			{
+				float b = -0.05f;
+				l[BUILDING_INDEX_TO_MODIFY].adjust_balcony_height(b);
+				key_cool_down = current_time;
+			}
+
+			//next texture
+			if(is_key_down('T'))
+			{
+				l[BUILDING_INDEX_TO_MODIFY].next_texture();
+				key_cool_down = current_time;
+			}
+
+			//random building
+			if(is_key_down('R'))
+			{
+				l[BUILDING_INDEX_TO_MODIFY].randomize();
+				key_cool_down = current_time;
+			}
 		}
+	}
+
+	//set texture
+	void loadTextures()
+	{
+		//texture_num = 1
+		wall_tex_list.push_back(resources::get_texture_handle(GL_RGB, "assets/brick_wall.gif"));//"!bricks");
+		frame_tex_list.push_back(resources::get_texture_handle(GL_RGB, "assets/frame.gif"));//"#FFFFFFFF");
+		balcony_tex_list.push_back(resources::get_texture_handle(GL_RGB, "assets/balcony.gif"));
+		floor_tex_list.push_back(resources::get_texture_handle(GL_RGBA, "assets/floor.gif"));
+		//texture_num = 2
+		wall_tex_list.push_back(resources::get_texture_handle(GL_RGB, "assets/floor1.gif"));
+		frame_tex_list.push_back(resources::get_texture_handle(GL_RGB, "assets/frame.gif"));
+		balcony_tex_list.push_back(resources::get_texture_handle(GL_RGB, "assets/balcony.gif"));
+		floor_tex_list.push_back(resources::get_texture_handle(GL_RGBA, "assets/parquet_floor.gif"));
+		//texture_num = 3
+		wall_tex_list.push_back(resources::get_texture_handle(GL_RGB, "assets/brick_wall1.gif"));
+		frame_tex_list.push_back(resources::get_texture_handle(GL_RGB, "assets/frame.gif"));
+		balcony_tex_list.push_back(resources::get_texture_handle(GL_RGB, "assets/balcony.gif"));
+		floor_tex_list.push_back(resources::get_texture_handle(GL_RGBA, "assets/floor1.gif"));
+		//texture_num = 4
+		wall_tex_list.push_back(resources::get_texture_handle(GL_RGB, "assets/glass_wall.gif"));
+		frame_tex_list.push_back(resources::get_texture_handle(GL_RGB, "assets/frame.gif"));
+		balcony_tex_list.push_back(resources::get_texture_handle(GL_RGB, "assets/balcony.gif"));
+		floor_tex_list.push_back(resources::get_texture_handle(GL_RGBA, "assets/brick_wall1.gif"));
 	}
 
 	// this is called to draw the world
@@ -223,7 +360,10 @@ class LSystem_building_app : public app {
 		for(int i = 0; i < BUILDING_COUNT; i++)
 		{
 			if(l[i].is_loaded())
-				l[i].render(cc.get_matrix());
+			{	
+				int index = l[i].get_texture_index();
+				l[i].render(cc.get_matrix(), wall_tex_list[index-1],floor_tex_list[index-1], frame_tex_list[index-1], balcony_tex_list[index-1]);
+			}
 		}
 		hotkeys();
 		if(current_time - key_cool_down > 100)
@@ -243,12 +383,42 @@ class LSystem_building_app : public app {
 			*/
 		}
 		const int DELTA = 20;
-		static int w1 = w - 250, h1 = h - 550, w2 = w1 + 205;
+		static int w1 = w - 320, h1 = h - 500, w2 = w1 + 215;
 		int i = 0;
-		font->draw_string(1.f, 0, 0, w1 + 185, h1 - i, w, h, "hotkey");
+		font->draw_string(1.f, 1.f, 1.f, w1 + 185, h1 - i, w, h, "hotkey");
 		i += DELTA;
-		font->draw_string(1.f, 1.f, 1.f, w1, h1 - i, w, h, "wall_height: %.3f", l[4].get_wall_height());
-		font->draw_string(1.f, 1.f, 1.f, w2, h1 - i, w, h, "(f/F)");
+		font->draw_string(1.f, 1.f, 1.f, w1, h1 - i, w, h, "iteration: %.3f", (float)l[BUILDING_INDEX_TO_MODIFY].get_iteration());
+		font->draw_string(1.f, 1.f, 1.f, w2, h1 - i, w, h, "(down/up)");
+		i += DELTA;
+		font->draw_string(1.f, 1.f, 1.f, w1, h1 - i, w, h, "angle: %.3f", l[BUILDING_INDEX_TO_MODIFY].get_angle());
+		font->draw_string(1.f, 1.f, 1.f, w2, h1 - i, w, h, "(left/right)");
+		i += DELTA;
+		font->draw_string(1.f, 1.f, 1.f, w1, h1 - i, w, h, "floor_count: %.3f", (float)l[BUILDING_INDEX_TO_MODIFY].get_floor_count());
+		font->draw_string(1.f, 1.f, 1.f, w2, h1 - i, w, h, "(k/l)");		
+		i += DELTA;		
+		font->draw_string(1.f, 1.f, 1.f, w1, h1 - i, w, h, "wall_height: %.3f", l[BUILDING_INDEX_TO_MODIFY].get_wall_height());
+		font->draw_string(1.f, 1.f, 1.f, w2, h1 - i, w, h, "(u/i)");
+		i += DELTA;
+		font->draw_string(1.f, 1.f, 1.f, w1, h1 - i, w, h, "wall_length: %.3f", l[BUILDING_INDEX_TO_MODIFY].get_inital_branch_length());
+		font->draw_string(1.f, 1.f, 1.f, w2, h1 - i, w, h, "(o/p)");
+		i += DELTA;
+		font->draw_string(1.f, 1.f, 1.f, w1, h1 - i, w, h, "balcony_height: %.3f", l[BUILDING_INDEX_TO_MODIFY].get_balcony_height());
+		font->draw_string(1.f, 1.f, 1.f, w2, h1 - i, w, h, "(h/j)");
+		i += DELTA;
+		font->draw_string(1.f, 1.f, 1.f, w1, h1 - i, w, h, "balcony_extention: %.3f", l[BUILDING_INDEX_TO_MODIFY].get_balcony_extension());
+		font->draw_string(1.f, 1.f, 1.f, w2, h1 - i, w, h, "(f/g)");
+		i += DELTA;
+		font->draw_string(1.f, 1.f, 1.f, w1, h1 - i, w, h, "floor_thickness: %.3f", l[BUILDING_INDEX_TO_MODIFY].get_floor_board_thickness());
+		font->draw_string(1.f, 1.f, 1.f, w2, h1 - i, w, h, "(c/v)");
+		i += DELTA;
+		font->draw_string(1.f, 1.f, 1.f, w1, h1 - i, w, h, "extension_length: %.3f", l[BUILDING_INDEX_TO_MODIFY].get_extension_length());
+		font->draw_string(1.f, 1.f, 1.f, w2, h1 - i, w, h, "(z/x)");
+		i += DELTA;
+		font->draw_string(1.f, 1.f, 1.f, w1, h1 - i, w, h, "texture: %.3f", (float)l[BUILDING_INDEX_TO_MODIFY].get_texture_index());
+		font->draw_string(1.f, 1.f, 1.f, w2, h1 - i, w, h, "(t)");
+		i += DELTA;
+		font->draw_string(1.f, 1.f, 1.f, w1, h1 - i, w, h, "randomize");
+		font->draw_string(1.f, 1.f, 1.f, w2, h1 - i, w, h, "(r)");
 	}
 };
 }

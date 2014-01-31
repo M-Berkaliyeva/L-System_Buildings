@@ -103,7 +103,7 @@ namespace octet
 		int floor_count;
 		int floor_board_vertex_count;
 		int floor_side_index;
-		int texture_num;
+		int texture_index;
 		int window_count;
 		float centre_of_ground_floor;
 		float angle;
@@ -115,7 +115,9 @@ namespace octet
 		float building_height;
 		float extension_length;
 		float winSize;
+		float winSize_control;
 		float maxWinSize;
+		float minWinSize;
 		float frameSize;
 		float balcony_extention;
 		float balcony_height;
@@ -268,15 +270,18 @@ namespace octet
 					balcony = true;
 					break;
 				case '(':	
-					maxWinSize = winSize;
+					//maxWinSize = winSize;
+					//minWinSize = winSize;
 					//should be in his format : (1.00)
 					float_str.push_back(output_str[i+1]);
 					float_str.push_back(output_str[i+2]);
 					float_str.push_back(output_str[i+3]);
 					float_str.push_back(output_str[i+4]);
-					winSize = (float)atof(float_str.c_str());
+					winSize = (float)atof(float_str.c_str()) + winSize_control;
 					if(winSize>maxWinSize)
 						maxWinSize = winSize;
+					if(winSize<minWinSize)
+						minWinSize = winSize;
 					i+=5;
 					break;
 				case 'F':
@@ -513,6 +518,9 @@ namespace octet
 			branch_length_decrement = 0;
 			is_stochastic = false;
 			winSize = 1.2f;
+			maxWinSize = winSize;
+			minWinSize = winSize;
+			winSize_control = 0;
 			frameSize = 0.05f;
 			balcony = false;
 			balcony_extention = .35f;
@@ -557,10 +565,40 @@ namespace octet
 			return wall_height;
 		}
 
+		// get floor extention
+		float get_extension_length()
+		{
+			return extension_length;
+		}
+
+		// get floor thickness
+		float get_floor_board_thickness()
+		{
+			return floor_board_thickness;
+		}
+
+		// get balcony extension
+		float get_balcony_extension()
+		{
+			return balcony_extention;
+		}
+
+		// get floor extention
+		float get_balcony_height()
+		{
+			return balcony_height;
+		}
+
 		//get floor count
 		int get_floor_count()
 		{
 			return floor_count;
+		}
+
+		//get texture index
+		int get_texture_index()
+		{
+			return texture_index;
 		}
 
 		//get the current iteration count
@@ -603,17 +641,14 @@ namespace octet
 			m_rotate_z_positive.rotateX(angle);
 			m_rotate_z_negative.loadIdentity();
 			m_rotate_z_negative.rotateX(-angle);
-		}
+		}		
 
 		//load rule configuration file from a given path
 		void load_from_file(char *path, texture_shader *shader) 	
 		{
 			texture_shader_ = shader;
-			texture_num = 1;
-			wall_tex = resources::get_texture_handle(GL_RGB, "assets/brick_wall.gif");//"!bricks");
-			frame_tex = resources::get_texture_handle(GL_RGB, "assets/frame.gif");//"#FFFFFFFF");
-			balcony_tex = resources::get_texture_handle(GL_RGB, "assets/balcony.gif");
-			floor_tex = resources::get_texture_handle(GL_RGBA, "assets/floor.gif");
+			texture_index = 1;	
+			winSize_control = 0;
 			std::ifstream f(path, std::ios::in);
 			dynarray<std::string> strs;
 			rules.reset();
@@ -663,6 +698,16 @@ namespace octet
 						getline(f, str);
 						sscanf(str.c_str(), "%d", &floor_count);
 					}
+					else if(str == "balcony extention")
+					{
+						getline(f, str);
+						sscanf(str.c_str(), "%d", &balcony_extention);
+					}
+					else if(str == "balcony height")
+					{
+						getline(f, str);
+						sscanf(str.c_str(), "%d", &balcony_height);
+					}
 					else if(str == "branch length decrement")
 					{
 						getline(f, str);
@@ -683,7 +728,7 @@ namespace octet
 					else if(str == "texture")
 					{
 						getline(f, str);
-						sscanf(str.c_str(), "%d", &texture_num);
+						sscanf(str.c_str(), "%d", &texture_index);
 					}
 					else if(str == "axiom")
 					{
@@ -732,34 +777,65 @@ namespace octet
 		}
 
 		//render both branch mesh
-		void render(const mat4t &camera_to_world)
+		void render(const mat4t &camera_to_world, GLuint w_t, GLuint fl_t, GLuint fr_t, GLuint b_t)
 		{
+			wall_tex = w_t;
+			floor_tex = fl_t;
+			frame_tex = fr_t;
+			balcony_tex = b_t;
+
 			mat4t modelToProjection = mat4t::build_projection_matrix(model_to_world, camera_to_world);
 			texture_shader_->render(modelToProjection, 0);
 			glEnableVertexAttribArray(attribute_pos);
 			glEnableVertexAttribArray(attribute_uv);
 
 			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, wall_tex);
+			glBindTexture(GL_TEXTURE_2D, w_t);
 			
 			glVertexAttribPointer(attribute_pos, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)&mesh[0]);
 			glVertexAttribPointer(attribute_uv, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void *)&uvs[0]);
 			glDrawArrays(GL_QUADS, 0, mesh.size());
 
-			glBindTexture(GL_TEXTURE_2D, floor_tex);
+			glBindTexture(GL_TEXTURE_2D, fl_t);
 			glVertexAttribPointer(attribute_pos, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)&floor_mesh[0]);
 			glVertexAttribPointer(attribute_uv, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void *)&floor_uvs[0]);
 			glDrawArrays(GL_TRIANGLES, 0, floor_mesh.size());
 
-			glBindTexture(GL_TEXTURE_2D, frame_tex);
+			glBindTexture(GL_TEXTURE_2D, fr_t);
 			glVertexAttribPointer(attribute_pos, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)&frame_mesh[0]);
 			glVertexAttribPointer(attribute_uv, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void *)&frame_uvs[0]);
 			glDrawArrays(GL_QUADS, 0, frame_mesh.size());
 
-			glBindTexture(GL_TEXTURE_2D, balcony_tex);
+			glBindTexture(GL_TEXTURE_2D, b_t);
 			glVertexAttribPointer(attribute_pos, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)&balcony_mesh[0]);
 			glVertexAttribPointer(attribute_uv, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void *)&balcony_uvs[0]);
 			glDrawArrays(GL_QUADS, 0, balcony_mesh.size());
+		}
+		//make random building
+		void randomize()
+		{
+			//int
+			iteration = rand() % 4 + 1;			
+			floor_count = rand() % 30 + 1;			
+			texture_index = rand() % 4 + 1;
+			//pseudo floats			
+			branch_length = (float)(rand() % 4 + 2);
+			//angle = (float)(rand() % 45 + 10);
+			wall_height = (float)(rand() % 4 + 2);
+			balcony_extention = ((float)(rand() % 7 + 2))/10;
+			balcony_height = ((float)(rand() % 7 + 4))/10;
+			extension_length = ((float)(rand() % 5 + 1))/10;
+			floor_board_thickness = ((float)(rand() % 5 + 1))/10;
+			/*winSize_control = (float)(rand() % 2 + 1);
+			if(maxWinSize+winSize_control >= wall_height)
+			{
+				winSize_control = wall_height - maxWinSize;
+			}else if(maxWinSize+winSize_control >= branch_length)
+			{
+				winSize_control = branch_length - maxWinSize;
+			}*/
+			generate_output_str();				
+			generate_mesh();
 		}
 		//decrease iteration count
 		void decrease_iteration()
@@ -786,6 +862,29 @@ namespace octet
 			branch_length_decrement += f;
 		}
 
+		//adjust window size
+		void adjust_winSize(float f)
+		{
+			if(maxWinSize+winSize_control+f < wall_height 
+				&& maxWinSize+winSize_control+f < branch_length 
+				&& minWinSize+winSize_control+f>0.5)
+			{
+				winSize_control += f;
+				generate_output_str();				
+				generate_mesh();
+			}
+		}
+
+		//set texture to next
+		void next_texture()
+		{
+			texture_index++;
+			if(texture_index>4)
+				texture_index = 1;
+			generate_output_str();				
+			generate_mesh();
+		}
+
 		//adjust inital branch length
 		void adjust_inital_branch_length(float f)
 		{
@@ -797,6 +896,76 @@ namespace octet
 			}
 		}
 
+		//adjust inital wall_height
+		void adjust_wall_height(float f)
+		{
+			if(wall_height + f > 1.5f)
+			{
+				wall_height += f;			
+				generate_output_str();				
+				generate_mesh();
+			}
+		}
+		//adjust balcony_extention
+		void adjust_balcony_extention(float f)
+		{
+			if(balcony_extention + f <= .75f 
+				&& balcony_extention + f >= .15f)
+			{
+				balcony_extention += f;			
+				generate_output_str();				
+				generate_mesh();
+			}
+		}
+		//adjust balcony_height
+		void adjust_balcony_height(float f)
+		{
+			if(balcony_height + f <= .7f 
+				&& balcony_height + f >= .4f)
+			{
+				balcony_height += f;			
+				generate_output_str();				
+				generate_mesh();
+			}
+		}
+		//adjust floor extension_length
+		void adjust_extension_length(float f)
+		{
+			if(extension_length + f <= .5f 
+				&& extension_length + f >= .1f)
+			{
+				extension_length += f;			
+				generate_output_str();				
+				generate_mesh();
+			}
+		}
+		//adjust floor_board_thickness
+		void adjust_floor_board_thickness(float f)
+		{
+			if(floor_board_thickness + f <= .5f 
+				&& floor_board_thickness + f >= .1f)
+			{
+				floor_board_thickness += f;			
+				generate_output_str();				
+				generate_mesh();
+			}
+		}
+		//adjust floor count
+		void increase_floor_count()
+		{
+			floor_count++;
+			generate_output_str();				
+			generate_mesh();
+		}
+		void decrease_floor_count()
+		{
+			if(floor_count >1)
+			{
+				floor_count--;
+				generate_output_str();				
+				generate_mesh();
+			}
+		}
 		//adjust angle for each turn
 		void adjust_angle(float f)
 		{
@@ -1062,7 +1231,7 @@ namespace octet
 				wp2 += next_floor;
 				wp3 += next_floor;						
 			}
-			winSize = 1.0f;//reset the window size back to default
+			winSize = winSize_control + 1.0f;//reset the window size back to default
 		}
 
 		void makeWindowFrame(vec3 &wp0, vec3 &wp1, vec3 &wp2, vec3 &wp3)

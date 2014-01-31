@@ -12,10 +12,12 @@ branch length
 2
 iteration
 1
+texture
+2
 axiom
 C
 letters
 AC
 rules
-FBKFKA
-F++A--A++F++A--A++F++A--A++F++A--A
+FB(0.80)KFKA
+F++A--A++FK++A--A++F++A--A++FK++A--A
