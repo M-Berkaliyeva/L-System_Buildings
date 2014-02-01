@@ -11,13 +11,13 @@ angle
 branch length
 2
 iteration
-2
+4
 texture
 2
 axiom
-AC
+C
 letters
 AC
 rules
-F+FBKF-FBKF-FBKF+F
-F--FKFA--A(0.80)KF(0.20)KK(1.80)KF(0.80)KA-K-FFA--FA
+FB(0.80)KFKA
+F++A--A++FK++A--A++F++A--A++FK++A--A
