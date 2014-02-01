@@ -294,6 +294,8 @@ namespace octet {
 		}
 		if(i == m.size())
 			exit(0);
+		
+		Sleep(1000/120);
 
         // waste some time. (do not do this in real games!)
 

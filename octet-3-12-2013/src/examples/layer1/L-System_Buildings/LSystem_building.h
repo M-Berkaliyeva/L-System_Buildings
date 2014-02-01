@@ -154,7 +154,7 @@ namespace octet
 			++next_iter;
 			vec3 edge1 = *pre_iter - *max_z_iter, edge2 = *max_z_iter - *next_iter;
 			float convex_dir = edge1.x() * edge2.z() - edge1.z() * edge2.x();
-			while(size != 3)
+			while(size > 2)
 			{
 				iter = floor_mesh_list.begin();
 				vec3 p0, p1, p2;
@@ -182,7 +182,7 @@ namespace octet
 						float b = v.x() * v0.z() - v.z() * v0.x();
 						v = p - p2;
 						float c = v.x() * v2.z() - v.z() * v2.x();
-						if(a * b > 0 && b * c > 0 && a * c > 0)
+						if(a * b >= 0 && b * c >= 0 && a * c >= 0)
 						{
 							has_found = false;
 							break;
@@ -200,10 +200,6 @@ namespace octet
 				floor_mesh_list.remove(iter);
 				size--;
 			}
-			iter = floor_mesh_list.begin();
-			floor_mesh[index] = *iter;
-			floor_mesh[index + 1] = *++iter;
-			floor_mesh[index + 2] = *++iter;
 		}
 
 
