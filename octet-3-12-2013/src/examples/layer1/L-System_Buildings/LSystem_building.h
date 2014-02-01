@@ -826,7 +826,7 @@ namespace octet
 		void randomize()
 		{
 			//int
-			iteration = rand() % 4 + 1;			
+			iteration = rand() % 4 + 2;			
 			floor_count = rand() % 30 + 1;			
 			texture_index = rand() % 4 + 1;
 			//pseudo floats			
@@ -851,7 +851,7 @@ namespace octet
 		//decrease iteration count
 		void decrease_iteration()
 		{
-			if(iteration != 0)
+			if(iteration > 2)
 			{
 				iteration--;
 				generate_output_str();				
