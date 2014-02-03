@@ -368,20 +368,20 @@ class LSystem_building_app : public app {
 		balcony_tex_list.push_back(resources::get_texture_handle(GL_RGB, "assets/balcony.gif"));
 		floor_tex_list.push_back(resources::get_texture_handle(GL_RGBA, "assets/floor.gif"));
 		//texture_num = 2
-		wall_tex_list.push_back(resources::get_texture_handle(GL_RGB, "assets/metal_base.gif"));
+		wall_tex_list.push_back(resources::get_texture_handle(GL_RGB, "assets/glass_wall.gif"));
 		frame_tex_list.push_back(resources::get_texture_handle(GL_RGB, "assets/frame.gif"));
 		balcony_tex_list.push_back(resources::get_texture_handle(GL_RGB, "assets/balcony.gif"));
-		floor_tex_list.push_back(resources::get_texture_handle(GL_RGBA, "assets/parquet_floor.gif"));
+		floor_tex_list.push_back(resources::get_texture_handle(GL_RGBA, "assets/brick_wall1.gif"));
 		//texture_num = 3
 		wall_tex_list.push_back(resources::get_texture_handle(GL_RGB, "assets/brick_wall1.gif"));
 		frame_tex_list.push_back(resources::get_texture_handle(GL_RGB, "assets/frame.gif"));
 		balcony_tex_list.push_back(resources::get_texture_handle(GL_RGB, "assets/balcony.gif"));
 		floor_tex_list.push_back(resources::get_texture_handle(GL_RGBA, "assets/floor1.gif"));
 		//texture_num = 4
-		wall_tex_list.push_back(resources::get_texture_handle(GL_RGB, "assets/floor_slab.gif"));
+		wall_tex_list.push_back(resources::get_texture_handle(GL_RGB, "assets/fl_texture.gif"));
 		frame_tex_list.push_back(resources::get_texture_handle(GL_RGB, "assets/frame.gif"));
 		balcony_tex_list.push_back(resources::get_texture_handle(GL_RGB, "assets/balcony.gif"));
-		floor_tex_list.push_back(resources::get_texture_handle(GL_RGBA, "assets/fl_texture.gif"));
+		floor_tex_list.push_back(resources::get_texture_handle(GL_RGBA, "assets/brick_wall1.gif"));
 		//texture_num = 5
 		wall_tex_list.push_back(resources::get_texture_handle(GL_RGB, "assets/stone_texture.gif"));
 		frame_tex_list.push_back(resources::get_texture_handle(GL_RGB, "assets/frame.gif"));
@@ -396,7 +396,7 @@ class LSystem_building_app : public app {
 		wall_tex_list.push_back(resources::get_texture_handle(GL_RGB, "assets/metal_wall.gif"));
 		frame_tex_list.push_back(resources::get_texture_handle(GL_RGB, "assets/frame.gif"));
 		balcony_tex_list.push_back(resources::get_texture_handle(GL_RGB, "assets/balcony.gif"));
-		floor_tex_list.push_back(resources::get_texture_handle(GL_RGBA, "assets/fl_texture.gif"));
+		floor_tex_list.push_back(resources::get_texture_handle(GL_RGBA, "assets/metal_base.gif"));
 		//texture_num = 8
 		wall_tex_list.push_back(resources::get_texture_handle(GL_RGB, "assets/metallic.gif"));
 		frame_tex_list.push_back(resources::get_texture_handle(GL_RGB, "assets/frame.gif"));
