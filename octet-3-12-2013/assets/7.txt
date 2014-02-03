@@ -13,7 +13,7 @@ branch length
 iteration
 1
 texture
-2
+7
 axiom
 F
 letters

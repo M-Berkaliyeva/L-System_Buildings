@@ -824,7 +824,7 @@ namespace octet
 			//int
 			iteration = rand() % 4 + 2;			
 			floor_count = rand() % 30 + 1;			
-			texture_index = rand() % 4 + 1;
+			texture_index = rand() % 8 + 1;
 			//pseudo floats			
 			branch_length = (float)(rand() % 4 + 2);
 			//angle = (float)(rand() % 45 + 10);
@@ -886,7 +886,7 @@ namespace octet
 		void next_texture()
 		{
 			texture_index++;
-			if(texture_index>4)
+			if(texture_index>8)
 				texture_index = 1;
 			generate_output_str();				
 			generate_mesh();

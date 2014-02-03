@@ -13,7 +13,7 @@ branch length
 iteration
 4
 texture
-2
+8
 axiom
 C
 letters
