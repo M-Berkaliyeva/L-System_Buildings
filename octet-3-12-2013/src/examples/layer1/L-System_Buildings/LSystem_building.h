@@ -938,8 +938,7 @@ namespace octet
 		//adjust floor extension_length
 		void adjust_extension_length(float f)
 		{
-			if(extension_length + f <= .5f 
-				&& extension_length + f >= .1f)
+			if(extension_length + f >= .1f)
 			{
 				extension_length += f;			
 				generate_output_str();				
