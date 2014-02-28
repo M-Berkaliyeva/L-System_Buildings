@@ -453,6 +453,7 @@ class LSystem_building_app : public app {
 		const int DELTA = 20;
 		static int w1 = w - 320, h1 = h - 500, w2 = w1 + 215;
 		int i = 0;
+		///*
 		font->draw_string(.0f, 1.f, 1.f, 0, 720, w, h, l[BUILDING_INDEX_TO_MODIFY].get_string().c_str());
 		font->draw_string(.0f, 1.f, 1.f, w1 + 225, h1 - i, w, h, "hotkey");
 		i += DELTA;
@@ -488,6 +489,7 @@ class LSystem_building_app : public app {
 		i += DELTA;
 		font->draw_string(.0f, 1.f, 1.f, w1, h1 - i, w, h, "randomize");
 		font->draw_string(.0f, 1.f, 1.f, w2, h1 - i, w, h, "(r)");
+		//*/
 	}
 };
 }

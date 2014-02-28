@@ -1,0 +1,27 @@
+floor thickness
+.3
+extension length
+.3
+wall height
+2
+floor count
+15
+angle
+45
+branch length
+2
+iteration
+4
+texture
+1
+axiom
+C
+letters
+ACCCCC
+rules
+-FKF+FKF+FKF-
+FKF+A+A+A++A+FAF+F++K
+FFKFF++A++FFKFF++A
+FFKFFKFF-F-FFKFF-F-FFKFFKFF-F-FFKFF-F
+FF++KFFKFF++KFFKFFKFF++FKF++FFKFF--FKF
+FF++A++AFF++FKF++FFKFF--FFK
